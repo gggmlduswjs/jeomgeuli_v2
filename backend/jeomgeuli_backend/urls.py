@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/api/", include("apps.api.urls")),
     path("api/braille/", include("apps.braille.urls")),
     path("api/chat/", include("apps.chat.urls")),  # explore 포함
+    path("api/exam/", include("apps.exam.urls")),
     path("api/learn/", include("apps.learn.urls")),
     path("api/learning/", include("apps.learning.urls")),
     path("api/newsfeed/", include("apps.newsfeed.urls")),

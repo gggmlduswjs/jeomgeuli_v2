@@ -7,6 +7,9 @@ import Quiz from "../pages/Quiz";
 import Review from "../pages/Review";
 import Explore from "../pages/Explore";
 import NotFound from "../pages/NotFound";
+import TextbookConverter from "../pages/exam/TextbookConverter";
+import TextCompress from "../pages/exam/TextCompress";
+import SentenceRepeat from "../pages/exam/SentenceRepeat";
 import DevHealth from "../components/system/DevHealth";
 import ErrorBoundary from "../components/system/ErrorBoundary";
 import HealthCheck from "../components/system/HealthCheck";
@@ -81,6 +84,12 @@ export default function App(){
             <Route path="/learn/quiz" element={<Quiz />} />
 
             <Route path="/review" element={<Review />} />
+
+            {/* 수능 과목 학습 모드 */}
+            <Route path="/exam/textbook" element={<TextbookConverter />} />
+            <Route path="/exam/compress" element={<TextCompress />} />
+            <Route path="/exam/repeat" element={<SentenceRepeat />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

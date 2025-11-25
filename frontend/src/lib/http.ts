@@ -128,6 +128,42 @@ export const http = {
       throw toAppError(error);
     }
   },
+
+  /**
+   * FormData POST 요청 (파일 업로드용)
+   */
+  postFormData: async (path: string, formData: FormData, options?: RequestInit): Promise<any> => {
+    try {
+      const response = await fetchWithTimeout(
+        `${API_BASE}${path}`,
+        {
+          method: 'POST',
+          ...options,
+          // Content-Type 헤더를 설정하지 않음 (브라우저가 자동으로 multipart/form-data 설정)
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await parseJsonResponse(response);
+        throw createError(
+          ErrorCode.API_ERROR,
+          errorData.error || errorData.detail || errorData.message || `HTTP ${response.status}`,
+          { status: response.status, data: errorData },
+          { status: response.status, data: errorData }
+        );
+      }
+
+      return parseJsonResponse(response);
+    } catch (error: unknown) {
+      // 이미 AppError인 경우 그대로 throw
+      if (error && typeof error === 'object' && 'code' in error) {
+        throw error;
+      }
+      // 그 외의 경우 AppError로 변환
+      throw toAppError(error);
+    }
+  },
 };
 
 export const api = http;

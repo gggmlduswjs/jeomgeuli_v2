@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "apps.api",
     "apps.braille",
     "apps.chat",
+    "apps.exam",
     "apps.learn",
     "apps.learning",
     "apps.newsfeed",

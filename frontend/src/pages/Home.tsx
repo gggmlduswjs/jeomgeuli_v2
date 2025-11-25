@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Search, RotateCcw, Type } from 'lucide-react';
+import { BookOpen, Search, RotateCcw, Type, FileText, Minimize2, Repeat } from 'lucide-react';
 import AppShellMobile from '../components/ui/AppShellMobile';
 import SpeechBar from '../components/input/SpeechBar';
 import useTTS from '../hooks/useTTS';
@@ -19,7 +19,7 @@ export default function Home() {
   // 페이지 진입 시 자동 음성 안내
   useEffect(() => {
     const onboardingMessage =
-      '시각장애인 학습 앱, 점글이입니다. 메인화면에 점자학습, 정보탐색, 복습하기, 자유변환 모드가 있습니다. 모드를 선택해주세요.';
+      '시각장애인 수능 학습 앱, 점글이입니다. 메인화면에 점자기초, 교재변환, 텍스트압축, 문장반복, 복습하기 모드가 있습니다. 모드를 선택해주세요.';
 
     // 페이지 진입 시 즉시 안내 음성 재생
     const timer = setTimeout(() => {
@@ -72,6 +72,27 @@ export default function Home() {
       speak('자유 변환 모드로 이동합니다.');
       stopSTT();
     },
+    textbookConvert: () => {
+      stopTTS();
+      navigate('/exam/textbook');
+      showToastMessage('교재 변환 모드로 이동합니다.');
+      speak('교재 변환 모드로 이동합니다.');
+      stopSTT();
+    },
+    compress: () => {
+      stopTTS();
+      navigate('/exam/compress');
+      showToastMessage('텍스트 압축 모드로 이동합니다.');
+      speak('텍스트 압축 모드로 이동합니다.');
+      stopSTT();
+    },
+    repeat: () => {
+      stopTTS();
+      navigate('/exam/repeat');
+      showToastMessage('문장 반복 모드로 이동합니다.');
+      speak('문장 반복 모드로 이동합니다.');
+      stopSTT();
+    },
     quiz: () => {
       stopTTS(); // 기존 TTS 중지
       navigate('/quiz');
@@ -83,7 +104,7 @@ export default function Home() {
     // 도움말
     help: () => {
       stopTTS(); // 기존 TTS 중지
-      const helpText = '사용 가능한 음성 명령어: 학습, 정보탐색, 복습, 자유변환, 퀴즈, 도움말, 앱소개듣기';
+      const helpText = '사용 가능한 음성 명령어: 점자기초, 교재변환, 텍스트압축, 문장반복, 복습, 도움말, 앱소개듣기';
       speak(helpText);
       showToastMessage('도움말을 음성으로 안내합니다.');
     },
@@ -143,8 +164,29 @@ export default function Home() {
     speak('자유 변환 모드로 이동합니다.');
     stopSTT();
   };
+  const goTextbook = () => {
+    stopTTS();
+    navigate('/exam/textbook');
+    showToastMessage('교재 변환 모드로 이동합니다.');
+    speak('교재 변환 모드로 이동합니다.');
+    stopSTT();
+  };
+  const goCompress = () => {
+    stopTTS();
+    navigate('/exam/compress');
+    showToastMessage('텍스트 압축 모드로 이동합니다.');
+    speak('텍스트 압축 모드로 이동합니다.');
+    stopSTT();
+  };
+  const goRepeat = () => {
+    stopTTS();
+    navigate('/exam/repeat');
+    showToastMessage('문장 반복 모드로 이동합니다.');
+    speak('문장 반복 모드로 이동합니다.');
+    stopSTT();
+  };
 
-  // 원형 메뉴 버튼 컴포넌트 (터치 이벤트 차단 - 음성으로만 제어)
+  // 원형 메뉴 버튼 컴포넌트 (임시로 마우스 클릭 가능 - 나중에 제거 예정)
   const RadialButton = ({ 
     label, 
     onClick, 
@@ -166,15 +208,14 @@ export default function Home() {
     };
 
     return (
-      <div
-        className={`flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 transition-all duration-300 shadow-lg pointer-events-none touch-manipulation ${colorClasses[color]}`}
+      <button
+        onClick={onClick}
+        className={`flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full border-2 transition-all duration-300 shadow-lg cursor-pointer hover:scale-105 active:scale-95 touch-manipulation ${colorClasses[color]}`}
         aria-label={command ? `${label} (음성으로 "${command}"라고 말하세요)` : label}
-        role="button"
-        tabIndex={-1}
       >
         <Icon className="w-5 h-5 md:w-6 md:h-6 mb-0.5" />
         <span className="text-[10px] md:text-xs font-medium whitespace-nowrap">{label}</span>
-      </div>
+      </button>
     );
   };
 
@@ -216,21 +257,29 @@ export default function Home() {
             </div>
           </button>
           
-          {/* 상단 버튼: 학습 */}
+          {/* 상단 버튼: 점자 기초 */}
           <div className="absolute -top-6 md:-top-8 left-1/2 transform -translate-x-1/2 z-10">
-            <RadialButton label="학습" Icon={BookOpen} onClick={goLearn} color="primary" command="학습" />
+            <RadialButton label="점자기초" Icon={BookOpen} onClick={goLearn} color="primary" command="점자기초" />
           </div>
-          {/* 오른쪽 버튼: 탐색 */}
-          <div className="absolute top-1/2 -right-6 md:-right-8 transform -translate-y-1/2 z-10">
-            <RadialButton label="탐색" Icon={Search} onClick={goExplore} color="success" command="탐색" />
+          {/* 오른쪽 상단 버튼: 교재변환 */}
+          <div className="absolute top-[15%] right-[15%] z-10">
+            <RadialButton label="교재변환" Icon={FileText} onClick={goTextbook} color="success" command="교재변환" />
+          </div>
+          {/* 오른쪽 하단 버튼: 텍스트압축 */}
+          <div className="absolute bottom-[15%] right-[15%] z-10">
+            <RadialButton label="텍스트압축" Icon={Minimize2} onClick={goCompress} color="accent" command="텍스트압축" />
           </div>
           {/* 하단 버튼: 복습 */}
           <div className="absolute -bottom-6 md:-bottom-8 left-1/2 transform -translate-x-1/2 z-10">
             <RadialButton label="복습" Icon={RotateCcw} onClick={goReview} color="accent" command="복습" />
           </div>
-          {/* 왼쪽 버튼: 변환 */}
-          <div className="absolute top-1/2 -left-6 md:-left-8 transform -translate-y-1/2 z-10">
-            <RadialButton label="변환" Icon={Type} onClick={goFree} color="sky" command="자유변환" />
+          {/* 왼쪽 하단 버튼: 문장반복 */}
+          <div className="absolute bottom-[15%] left-[15%] z-10">
+            <RadialButton label="문장반복" Icon={Repeat} onClick={goRepeat} color="sky" command="문장반복" />
+          </div>
+          {/* 왼쪽 상단 버튼: 자유변환 (기존 유지) */}
+          <div className="absolute top-[15%] left-[15%] z-10">
+            <RadialButton label="자유변환" Icon={Type} onClick={goFree} color="sky" command="자유변환" />
           </div>
         </div>
       </div>
@@ -243,7 +292,7 @@ export default function Home() {
         <button
           onClick={() =>
             speak(
-              '시각장애인 학습 앱, 점글이입니다. 메인화면에 점자학습, 정보탐색, 복습하기, 자유변환 모드가 있습니다. 모드를 선택해주세요.'
+              '시각장애인 수능 학습 앱, 점글이입니다. 메인화면에 점자기초, 교재변환, 텍스트압축, 문장반복, 복습하기 모드가 있습니다. 모드를 선택해주세요.'
             )
           }
           className="text-sm text-primary hover:text-primary/80 underline transition-colors"

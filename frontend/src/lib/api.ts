@@ -214,3 +214,102 @@ export function normalizeAnswer(response: ChatResponse | null | undefined): stri
   return response.answer || '';
 }
 
+// Exam API Types
+export interface TextbookConvertResponse {
+  braille_cells: number[][];
+  braille_text: string;
+  original_text: string;
+  text_length: number;
+  cells_count: number;
+  pages_count: number;
+  error?: string;
+}
+
+export interface CompressTextResponse {
+  compressed_text: string;
+  original_length: number;
+  compressed_length: number;
+  compression_ratio: number;
+  mode: string;
+  error?: string;
+}
+
+export interface SentenceSummaryResponse {
+  summary: string;
+  original: string;
+  error?: string;
+}
+
+// Exam API Functions
+export async function convertTextbook(pdfFile: File): Promise<TextbookConvertResponse> {
+  const startTime = Date.now();
+  try {
+    const formData = new FormData();
+    formData.append('pdf', pdfFile);
+    
+    const response = await http.postFormData('/exam/convert-textbook/', formData);
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('convertTextbook', duration, true);
+    
+    return {
+      braille_cells: response.braille_cells || [],
+      braille_text: response.braille_text || '',
+      original_text: response.original_text || '',
+      text_length: response.text_length || 0,
+      cells_count: response.cells_count || 0,
+      pages_count: response.pages_count || 0,
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('convertTextbook', duration, false);
+    console.error('[API] convertTextbook error:', error);
+    const appError = isAppError(error) ? error : toAppError(error);
+    throw appError;
+  }
+}
+
+export async function compressText(
+  text: string,
+  mode: 'compressed' | 'outline' = 'compressed',
+  targetRatio: number = 0.3
+): Promise<CompressTextResponse> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/exam/compress/', {
+      text,
+      mode,
+      targetRatio,
+    });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('compressText', duration, true);
+    return {
+      compressed_text: response.compressed_text || '',
+      original_length: response.original_length || 0,
+      compressed_length: response.compressed_length || 0,
+      compression_ratio: response.compression_ratio || 0,
+      mode: response.mode || mode,
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('compressText', duration, false);
+    console.error('[API] compressText error:', error);
+    const appError = isAppError(error) ? error : toAppError(error);
+    throw appError;
+  }
+}
+
+export async function getSentenceSummary(sentence: string): Promise<string> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/exam/sentence-summary/', { sentence });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getSentenceSummary', duration, true);
+    return response.summary || '';
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getSentenceSummary', duration, false);
+    console.error('[API] getSentenceSummary error:', error);
+    return ''; // 실패 시 빈 문자열 반환 (선택적 기능이므로)
+  }
+}
+

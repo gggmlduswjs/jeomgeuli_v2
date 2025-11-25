@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useVoiceStore } from '../../store/voice';
-import VoiceEventBus, { VoiceEventType } from '../../lib/voice/VoiceEventBus';
+import VoiceEventBus, { VoiceEventType, onMicMode, onMicIntent, onTranscript, onCommand, onError } from '../../lib/voice/VoiceEventBus';
 import VoiceService from '../../services/VoiceService';
 import micMode from '../../lib/voice/MicMode';
 
@@ -43,23 +43,23 @@ export default function VoiceRecognitionDebug() {
     };
 
     // VoiceEventBus 이벤트 리스너 등록
-    const unsubMicMode = VoiceEventBus.onMicMode((detail) => {
+    const unsubMicMode = onMicMode((detail) => {
       addLog('MIC_MODE', detail);
     });
 
-    const unsubMicIntent = VoiceEventBus.onMicIntent((detail) => {
+    const unsubMicIntent = onMicIntent((detail) => {
       addLog('MIC_INTENT', detail);
     });
 
-    const unsubTranscript = VoiceEventBus.onTranscript((detail) => {
+    const unsubTranscript = onTranscript((detail) => {
       addLog('TRANSCRIPT', detail);
     });
 
-    const unsubCommand = VoiceEventBus.onCommand((detail) => {
+    const unsubCommand = onCommand((detail) => {
       addLog('COMMAND', detail);
     });
 
-    const unsubError = VoiceEventBus.onError((detail) => {
+    const unsubError = onError((detail) => {
       addLog('ERROR', detail);
     });
 
