@@ -6,7 +6,8 @@ import SpeechBar from '../../components/input/SpeechBar';
 import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
-import { getSentenceSummary, convertBraille } from '../../lib/api';
+import { examAPI } from '../../lib/api/ExamAPI';
+import { brailleAPI } from '../../lib/api/BrailleAPI';
 import useBrailleBLE from '../../hooks/useBrailleBLE';
 import ToastA11y from '../../components/system/ToastA11y';
 import VoiceService from '../../services/VoiceService';
@@ -135,7 +136,7 @@ export default function SentenceRepeat() {
     // 3. 요약도 함께 (비동기, 2초 후)
     setTimeout(async () => {
       try {
-        const summary = await getSentenceSummary(sentence);
+        const summary = await examAPI.getSentenceSummary(sentence);
         if (summary) {
           speak(`요약: ${summary}`);
         }

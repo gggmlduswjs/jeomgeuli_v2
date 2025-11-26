@@ -5,7 +5,8 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from datetime import datetime
 from .models import ReviewItem, ReviewAttempt
-from .srs import calculate_next_review, get_due_items
+from .srs import calculate_next_review
+from .repositories import ReviewItemRepository
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -29,8 +30,9 @@ def enqueue_review(request):
                 'error': f'Invalid type. Must be one of: {valid_types}'
             }, status=400)
         
-        # ReviewItem 생성
-        review_item = ReviewItem.objects.create(
+        # ReviewItem 생성 (Repository 사용)
+        repo = ReviewItemRepository()
+        review_item = repo.create(
             type=data['type'],
             source=data.get('source', 'manual'),
             content=data['content'],
@@ -55,7 +57,9 @@ def next_reviews(request):
         count = int(request.GET.get('n', 10))
         count = min(count, 50)  # 최대 50개로 제한
         
-        due_items = get_due_items(count)
+        # Repository 사용
+        repo = ReviewItemRepository()
+        due_items = repo.get_due_items(count)
         
         items = []
         for item in due_items:
@@ -75,9 +79,7 @@ def next_reviews(request):
         return JsonResponse({
             'items': items,
             'count': len(items),
-            'total_due': ReviewItem.objects.filter(
-                next_due__lte=timezone.now()
-            ).count()
+            'total_due': repo.get_all_due_count()
         })
         
     except Exception as e:
@@ -98,18 +100,17 @@ def grade_review(request, item_id):
         if not (0 <= grade <= 4):
             return JsonResponse({'error': 'Grade must be between 0 and 4'}, status=400)
         
-        try:
-            review_item = ReviewItem.objects.get(id=item_id)
-        except ReviewItem.DoesNotExist:
+        # Repository 사용
+        repo = ReviewItemRepository()
+        review_item = repo.get_by_id(item_id)
+        if not review_item:
             return JsonResponse({'error': 'Review item not found'}, status=404)
         
         # SRS 계산으로 다음 복습 시간 업데이트
         updates = calculate_next_review(review_item, grade)
         
-        # ReviewItem 업데이트
-        for field, value in updates.items():
-            setattr(review_item, field, value)
-        review_item.save()
+        # ReviewItem 업데이트 (Repository 사용)
+        repo.update(review_item, **updates)
         
         # 시도 기록 생성
         ReviewAttempt.objects.create(
@@ -183,7 +184,9 @@ def review_save(request):
             "original_payload": payload
         }
         
-        review_item = ReviewItem.objects.create(
+        # Repository 사용
+        repo = ReviewItemRepository()
+        review_item = repo.create(
             type=item_type if item_type in ['char', 'word', 'sentence', 'braille'] else 'word',
             source='quiz_wrong' if kind == 'wrong' else 'learning_queue',
             content=content_dict,
@@ -213,12 +216,17 @@ def review_list(request):
         count = int(request.GET.get('n', 50))
         count = min(count, 100)  # 최대 100개로 제한
         
+        # Repository 사용
+        repo = ReviewItemRepository()
+        
         # 전체 항목 수 확인 (디버깅)
+        # Note: Repository에 count 메서드가 없으므로 직접 조회 (필요시 추가 가능)
+        from .models import ReviewItem
         total_count = ReviewItem.objects.count()
         print(f"[review_list] Total ReviewItems in DB: {total_count}")
         
-        due_items = get_due_items(count)
-        print(f"[review_list] Due items count: {due_items.count()}")
+        due_items = repo.get_due_items(count)
+        print(f"[review_list] Due items count: {len(due_items)}")
         
         items = []
         for item in due_items:

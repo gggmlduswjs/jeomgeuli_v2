@@ -4,13 +4,44 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import type { LessonItem } from "@/lib/normalize";
 import type { LessonMode } from "@/store/lessonSession";
 import { loadLessonSession, saveLessonSession } from "@/store/lessonSession";
-import { convertBraille, fetchLearn, saveReview } from "@/lib/api";
+import { brailleAPI } from "@/lib/api/BrailleAPI";
+import { learningAPI } from "@/lib/api/LearningAPI";
 import { normalizeCells, type Cell } from "@/lib/brailleSafe";
 import { localToBrailleCells } from "@/lib/braille";
+import type { LearnItem } from "@/types/api";
 import useTTS from '../hooks/useTTS';
+import useSTT from '../hooks/useSTT';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import VoiceService from '../services/VoiceService';
 import { useVoiceStore } from '../store/voice';
+import BrailleDot from '../components/braille/BrailleDot';
+
+// LearnItem을 LessonItem으로 변환
+function convertLearnItemToLessonItem(item: LearnItem): LessonItem {
+  const cells: Cell[] = [];
+  
+  // cell이 있으면 변환
+  if (item.cell && Array.isArray(item.cell) && item.cell.length === 6) {
+    cells.push(item.cell.map(v => (v ? 1 : 0)) as Cell);
+  }
+  
+  // cells가 있으면 변환
+  if (item.cells && Array.isArray(item.cells)) {
+    item.cells.forEach(cell => {
+      if (Array.isArray(cell) && cell.length === 6) {
+        cells.push(cell.map(v => (v ? 1 : 0)) as Cell);
+      }
+    });
+  }
+  
+  return {
+    char: item.char,
+    word: item.word,
+    sentence: item.sentence,
+    name: item.name,
+    cells: cells.length > 0 ? cells : undefined,
+  } as LessonItem;
+}
 
 // 🧩 유틸: 어떤 형태로 와도 6튜플로 변환
 function toTuple(x: any): Cell {
@@ -47,15 +78,7 @@ function cellsFromItem(it: any): Cell[] {
 }
 
 /* ─ UI helpers (LearnStep과 동일 톤) ─ */
-function Dot({ on }: { on: boolean }) {
-  return (
-    <span
-      className={`inline-block w-4 h-4 rounded-full mx-0.5 my-0.5 border-2 ${
-        on ? "bg-primary border-primary shadow-sm" : "bg-card border-border"
-      }`}
-    />
-  );
-}
+const Dot = BrailleDot;
 function CellView({ c }: { c: Cell }) {
   const [a, b, c2, d, e, f] = c || [0, 0, 0, 0, 0, 0];
   return (
@@ -198,7 +221,6 @@ export default function Quiz() {
 
   // STT
   // STT - VoiceService 사용
-  const isListening = useVoiceStore(state => state.isListening);
   const transcript = useVoiceStore(state => state.transcript);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -237,10 +259,13 @@ export default function Quiz() {
         return;
       }
       try {
-        const { items } = await fetchLearn(mode);
+        const { items } = await learningAPI.fetchLearn(mode);
         if (!alive) return;
-        setPool(items);
-        saveLessonSession({ mode, items, createdAt: Date.now() });
+        const convertedItems = Array.isArray(items)
+          ? items.map(convertLearnItemToLessonItem)
+          : [];
+        setPool(convertedItems);
+        saveLessonSession({ mode, items: convertedItems, createdAt: Date.now() });
       } finally {
         if (alive) setLoading(false);
       }
@@ -309,7 +334,7 @@ export default function Quiz() {
 
       // 1) 서버 변환 (404면 건너뜀)
       try {
-        const res = await convertBraille(promptText(cur), mode);
+        const res = await brailleAPI.convertBraille(promptText(cur), mode);
         const norm = normalizeCells(res?.cells ?? []);
         if (!cancelled && norm.length) { setCells(norm.map(toTuple)); return; }
       } catch { /* ignore */ }
@@ -323,6 +348,9 @@ export default function Quiz() {
     })();
     return () => { cancelled = true; };
   }, [cur, mode]);
+
+  // STT는 useSTT 훅에서 가져옴
+  const { start: startSTT, stop: stopSTT, isListening } = useSTT();
 
   // TTS는 useTTS 훅에서 가져옴
   const speakPrompt = () => {
@@ -418,7 +446,7 @@ export default function Quiz() {
     const ok = userAns.length > 0 && isAnswerMatch(userAns, answer, cur);
     
     if (!ok) {
-      await saveReview("wrong", {
+      await learningAPI.saveReview("wrong", {
         mode, expected: answer, user: userAns, idx: i,
         questionText: promptText(cur),
         questionCells: cells,             // ← 여기가 포인트

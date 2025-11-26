@@ -19,15 +19,18 @@ urlpatterns = [
     path("api/app/", include("apps.app.urls")),
     path("api/api/", include("apps.api.urls")),
     path("api/braille/", include("apps.braille.urls")),
-    path("api/chat/", include("apps.chat.urls")),  # explore 포함
+    path("api/chat/", include("apps.chat.urls")),
     path("api/exam/", include("apps.exam.urls")),
     path("api/learn/", include("apps.learn.urls")),
     path("api/learning/", include("apps.learning.urls")),
     path("api/newsfeed/", include("apps.newsfeed.urls")),
     path("api/search/", include("apps.search.urls")),
+    path("api/vocab/", include("apps.vocab.urls")),
+    path("api/analytics/", include("apps.analytics.urls")),
+    path("api/explore/", include("apps.explore.urls")),
     
-    # 레거시 호환: /api/explore/ -> /api/chat/explore/
-    path("api/explore/", include("apps.chat.urls")),
+    # 레거시 호환: /api/explore/ -> /api/chat/explore/ (기존 경로 유지)
+    # path("api/explore/", include("apps.chat.urls")),  # 주석 처리
 ]
 
 # React SPA fallback - 발표/시연용 구조 (절대 변경 금지)

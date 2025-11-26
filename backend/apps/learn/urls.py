@@ -14,4 +14,9 @@ urlpatterns = [
     path("word/",      views.learn_word,     name="learn_word"),
     path("sentence/",  views.learn_sentence, name="learn_sentence"),
     path("keyword/",   views.learn_keyword,  name="learn_keyword"),
+    
+    # New Jeomgeuli-Suneung endpoints
+    path("passage-analyze/", views.analyze_passage, name="analyze_passage"),
+    path("extract-keywords/", views.extract_keywords, name="extract_keywords"),  # 핵심 키워드 추출
+    path("extract-key/", views.extract_passage_key, name="extract_passage_key"),  # 핵심 문장 추출
 ]

@@ -10,7 +10,8 @@ import useSTT from '../hooks/useSTT';
 import useBrailleBLE from '../hooks/useBrailleBLE';
 import { useBraillePlayback } from '../hooks/useBraillePlayback';
 import useVoiceCommands from '../hooks/useVoiceCommands';
-import { askChat, askChatWithKeywords, type ChatResponse, fetchExplore, saveReview } from '../lib/api';
+import { chatAPI, type ChatResponse } from '../lib/api/ChatAPI';
+import { learningAPI } from '../lib/api/LearningAPI';
 import type { ChatMessage } from '../types';
 import { useVoiceStore } from '../store/voice';
 import VoiceEventBus, { VoiceEventType } from '../lib/voice/VoiceEventBus';
@@ -199,9 +200,9 @@ export default function Explore() {
             word: keyword,
           };
 
-          const result = await saveReview('keyword', payload);
+          const result = await learningAPI.saveReview('keyword', payload);
           
-          if (result.ok) {
+          if (result) {
             console.log(`[Explore] 키워드 "${keyword}" 저장 성공:`, result);
             successCount++;
             savedKeywords.push(keyword);
@@ -290,7 +291,7 @@ export default function Explore() {
 
 답변 후에 핵심 키워드 3개를 추출해서 "키워드: 키워드1, 키워드2, 키워드3" 형태로 끝에 추가해주세요.`;
 
-      const result = await askChatWithKeywords(expandPrompt);
+      const result = await chatAPI.askChatWithKeywords(expandPrompt);
       
       // typing indicator 제거
       setMessages(p => p.filter(m => m.id !== typingId));
@@ -329,13 +330,13 @@ export default function Explore() {
     } finally {
       setIsLoading(false);
     }
-  }, [askChatWithKeywords, handleAiResponse, speak]);
+  }, [handleAiResponse, speak]);
 
   // 정보탐색 모드 처리
   const handleExplore = useCallback(async (query: string) => {
     setIsExploreLoading(true);
     try {
-      const data = await fetchExplore(query);
+      const data = await chatAPI.fetchExplore(query);
       setExploreData({
         answer: data.answer ?? "",
         news: data.news ?? [],
@@ -403,7 +404,7 @@ export default function Explore() {
 
     try {
       // AI API 호출 - 키워드와 함께
-      const result = await askChatWithKeywords(userText);
+      const result = await chatAPI.askChatWithKeywords(userText);
       if (import.meta?.env?.DEV) {
         console.debug("[Explore] result=", result);
       }
@@ -445,7 +446,7 @@ export default function Explore() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, askChat, handleAiResponse, speak]);
+  }, [isLoading, handleAiResponse, speak]);
 
   // 음성 명령 처리
   const { onSpeech } = useVoiceCommands({

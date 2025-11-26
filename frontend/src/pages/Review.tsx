@@ -3,19 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCcw, Mic, MicOff, Check, X } from "lucide-react";
 // import { api } from "@/lib/http";
 import { type Cell } from "@/lib/brailleSafe";
-import { API_BASE } from "@/lib/api";
-import { convertBraille } from "@/lib/api";
 import { normalizeCells } from "@/lib/brailleSafe";
+import { learningAPI } from "../lib/api/LearningAPI";
+import { brailleAPI } from "../lib/api/BrailleAPI";
 import useTTS from "../hooks/useTTS";
 import useVoiceCommands from "../hooks/useVoiceCommands";
 import AppShellMobile from "../components/ui/AppShellMobile";
 import VoiceService from "../services/VoiceService";
 import { useVoiceStore, selectIsListening, selectTranscript } from "../store/voice";
+import BrailleDot from '../components/braille/BrailleDot';
 
 // 점자 셀 표시 컴포넌트 (퀴즈와 동일)
-function Dot({ on }: { on: boolean }) {
-  return <span className={`inline-block w-4 h-4 rounded-full mx-0.5 my-0.5 border-2 ${on ? "bg-primary border-primary shadow-sm" : "bg-card border-border"}`} />;
-}
+const Dot = BrailleDot;
 function CellView({ c }: { c: Cell }) {
   // 안전한 배열 구조분해할당
   const cellArray = Array.isArray(c) && c.length >= 6 ? c : [0,0,0,0,0,0];
@@ -104,26 +103,16 @@ export default function Review() {
     (async () => {
       setLoading(true);
       try {
-        // 1) 서버 목록 시도
-        const response = await fetch(`${API_BASE}/learning/list/`);
-        console.log('[Review] API response status:', response.status);
-        if (response.ok) {
-          const j = await response.json();
-          console.log('[Review] API response data:', j);
-          if (Array.isArray(j?.items)) {
-            if (j.items.length > 0) {
-              console.log('[Review] Loaded items:', j.items.length);
-              setItems(j.items);
-              setLoading(false);
-              return;
-            } else {
-              console.log('[Review] No items in response');
-            }
-          } else {
-            console.warn('[Review] Response is not an array:', j);
-          }
+        // 1) 서버 목록 시도 (LearningAPI 사용)
+        const reviewItems = await learningAPI.listReviewItems();
+        console.log('[Review] API response items:', reviewItems.length);
+        if (reviewItems.length > 0) {
+          console.log('[Review] Loaded items:', reviewItems.length);
+          setItems(reviewItems);
+          setLoading(false);
+          return;
         } else {
-          console.error('[Review] API response not OK:', response.status, response.statusText);
+          console.log('[Review] No items in response');
         }
       } catch (error) {
         console.error('[Review] 서버 목록 로드 실패:', error);
@@ -247,7 +236,7 @@ export default function Review() {
       
       (async () => {
         try {
-          const result = await convertBraille(text, 'word');
+          const result = await brailleAPI.convertBraille(text, 'word');
           if (!cancelled) {
             if (result.ok && result.cells && Array.isArray(result.cells)) {
               const normalized = normalizeCells(result.cells) as Cell[];

@@ -42,10 +42,14 @@
 │  └────────────────────────────────────────────────────┘  │
 │                                                           │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │              API Layer                              │  │
+│  │              API Layer (Facade Pattern)             │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────┐ │  │
+│  │  │  ExamAPI     │  │  ChatAPI     │  │BrailleAPI│ │  │
+│  │  │  VocabAPI    │  │  LearnAPI    │  │Learning  │ │  │
+│  │  └──────────────┘  └──────────────┘  └──────────┘ │  │
 │  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │         lib/api.ts                           │ │  │
-│  │  │  - fetchExplore, convertBraille, etc.        │ │  │
+│  │  │         lib/api.ts (Deprecated)               │ │  │
+│  │  │  - 레거시 호환성 유지, 신규 코드는 Facade 사용 │ │  │
 │  │  └──────────────────────────────────────────────┘ │  │
 │  └────────────────────────────────────────────────────┘  │
 └───────────────────────────┬───────────────────────────────┘
@@ -57,13 +61,24 @@
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │   Apps       │  │   Services   │  │    Utils     │  │
 │  │              │  │              │  │              │  │
-│  │ - chat       │  │ - ai.py      │  │ - braille_   │  │
-│  │ - braille    │  │              │  │   converter  │  │
-│  │ - learn      │  │              │  │ - data_      │  │
-│  │ - learning   │  │              │  │   loader     │  │
+│  │ - chat       │  │ - Passage    │  │ - braille_   │  │
+│  │ - braille    │  │   Analysis   │  │   converter  │  │
+│  │ - learn      │  │ - Braille    │  │ - data_      │  │
+│  │ - learning   │  │   Pattern    │  │   loader     │  │
+│  │ - exam       │  │ - Exam       │  │              │  │
+│  │ - vocab      │  │   Session    │  │              │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │         │                  │                  │          │
 │         └──────────────────┼──────────────────┘          │
+│                            │                              │
+│  ┌─────────────────────────▼──────────────────────────┐  │
+│  │         Repository Layer (Repository Pattern)      │  │
+│  │  ┌──────────────┐  ┌──────────────┐                │  │
+│  │  │ TextbookRepo │  │ LearnDataRepo│                │  │
+│  │  │ UnitRepo     │  │ ReviewRepo   │                │  │
+│  │  │ QuestionRepo │  │ VocabRepo    │                │  │
+│  │  └──────────────┘  └──────────────┘                │  │
+│  └─────────────────────────┬──────────────────────────┘  │
 │                            │                              │
 │  ┌─────────────────────────▼──────────────────────────┐  │
 │  │              Data Layer                             │  │
@@ -110,13 +125,15 @@ CommandRouter.route()
     ↓
 Explore.tsx
     ↓
-lib/api.ts → fetchExplore()
+chatAPI.fetchExplore() (Facade API)
     ↓
 POST /api/explore/
     ↓
 backend/apps/chat/views.py → explore()
     ↓
-AI 처리 (OpenAI/Gemini)
+ExploreService (Service Layer)
+    ↓
+AIClientFactory → AI 처리 (OpenAI/Gemini)
     ↓
 뉴스 검색 (네이버 API)
     ↓
@@ -134,11 +151,13 @@ useBraillePlayback → 점자 출력
 ```
 텍스트 입력
     ↓
-lib/api.ts → convertBraille()
+brailleAPI.convertBraille() (Facade API)
     ↓
 POST /api/braille/convert/
     ↓
 backend/apps/braille/views.py
+    ↓
+BraillePatternService (Service Layer)
     ↓
 utils/braille_converter.py
     ↓
@@ -225,8 +244,14 @@ BrailleCell.tsx 표시
 - **역할**: 학습 데이터 제공
 - **주요 엔드포인트**:
   - `/api/learn/{mode}/`: 학습 데이터 조회
+  - `/api/learn/passage-analyze/`: 지문 분석
+  - `/api/learn/extract-keywords/`: 키워드 추출
+  - `/api/learn/extract-key/`: 핵심 문장 추출
+- **아키텍처**:
+  - **Repository**: `LearnDataRepository` - 데이터 접근 계층
+  - **Service**: `PassageAnalysisService` - 비즈니스 로직
 - **데이터 소스**:
-  - `data/lesson_*.json`
+  - `data/lesson_*.json` (정적 데이터)
 
 ## 상태 관리 전략
 
@@ -299,6 +324,39 @@ AppError 생성
 - 프론트엔드: 타입 검증
 - 백엔드: 입력 검증 및 sanitization
 
+## 디자인 패턴
+
+### 1. Facade Pattern (프론트엔드 API)
+- **목적**: 복잡한 API 호출을 단순화
+- **구현**: `lib/api/*.ts` (ExamAPI, ChatAPI, BrailleAPI 등)
+- **장점**: 
+  - 일관된 에러 처리
+  - 성능 모니터링 통합
+  - 타입 안정성
+
+### 2. Repository Pattern (백엔드 데이터 접근)
+- **목적**: 데이터 접근 로직 캡슐화
+- **구현**: `apps/*/repositories.py`
+- **장점**:
+  - 테스트 용이성
+  - 데이터 소스 변경 용이
+  - 쿼리 최적화 중앙화
+
+### 3. Service Layer Pattern (백엔드 비즈니스 로직)
+- **목적**: 비즈니스 로직과 데이터 접근 분리
+- **구현**: `apps/*/services.py`
+- **장점**:
+  - 재사용성
+  - 테스트 용이성
+  - 유지보수성
+
+### 4. Strategy Pattern (과목별 학습 전략)
+- **목적**: 과목별 다른 학습 방법 적용
+- **구현**: `frontend/src/strategies/subjectLearning.ts`
+- **장점**:
+  - 확장성
+  - 유연성
+
 ## 확장성
 
 ### 1. 새로운 명령 추가
@@ -306,25 +364,37 @@ AppError 생성
 2. `CommandHandlers` 타입에 핸들러 추가
 3. 컴포넌트에서 핸들러 구현
 
-### 2. 새로운 API 추가
-1. `lib/api.ts`에 함수 추가
-2. 백엔드에 엔드포인트 추가
-3. 에러 처리 추가
+### 2. 새로운 API 추가 (Facade Pattern)
+1. `lib/api/`에 새로운 Facade 클래스 생성
+2. `types/api.ts`에 타입 정의 추가
+3. 백엔드에 엔드포인트 추가
+4. Repository/Service Layer 구현
 
 ### 3. 새로운 Provider 추가
 1. `VoiceService`에 Provider 인터페이스 구현
 2. `createDefaultSTTProvider()`에 추가
 
+### 4. 새로운 Repository 추가
+1. `apps/{app}/repositories.py`에 Repository 클래스 생성
+2. Service Layer에서 Repository 사용
+3. View에서 Service 사용
+
 ## 테스트 전략
 
 ### 단위 테스트
-- 핵심 로직: `CommandRouter`, `CommandService`
-- 에러 처리: `errors.ts`
-- Store: `voice.ts`
+- **프론트엔드**:
+  - 핵심 로직: `CommandRouter`, `CommandService`
+  - 에러 처리: `errors.ts`
+  - Store: `voice.ts`
+  - Facade API: `lib/api/*.ts`
+- **백엔드**:
+  - Repository: `apps/*/tests/test_repositories.py`
+  - Service: `apps/*/tests/test_services.py`
 
 ### 통합 테스트
-- API 호출 흐름
+- API 호출 흐름 (Facade API 사용)
 - 음성 제어 흐름
+- Repository-Service-View 통합
 
 ### E2E 테스트
 - 사용자 시나리오

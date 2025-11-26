@@ -15,7 +15,7 @@ type CommandHandlers = {
 	back?: () => void;
 	menu?: () => void;
   
-  // 학습 관련
+  // 학습 관련 (레거시)
 	learn?: () => void;
 	quiz?: () => void;
 	review?: () => void;
@@ -25,6 +25,16 @@ type CommandHandlers = {
 	explore?: () => void;
 	news?: () => void;
 	weather?: () => void;
+  
+  // 새로운 Jeomgeuli-Suneung 메뉴
+	textbook?: () => void;
+	passage?: () => void;
+	graphTable?: () => void;
+	question?: () => void;
+	vocab?: () => void;
+	brailleSpeed?: () => void;
+	examMode?: () => void;
+	examTimer?: () => void;
   
   // 점자 관련
 	brailleOn?: () => void;
@@ -226,7 +236,7 @@ function correctMisrecognition(text: string): string {
 
 /** 명령어 목록 정의 (오인식 패턴 포함) - 모든 명령어에 다양한 표현 추가 */
 const COMMAND_PHRASES: Record<string, string[]> = {
-  // 페이지 이동
+  // 페이지 이동 (레거시)
   learn: ["학습", "학습하기", "공부", "점자 학습", "점자학습", "학습모드", "학습 모드", "학", "학습해", "공부해", "학습모드로"],
   quiz: ["퀴즈", "문제", "테스트", "시험", "퀴", "퀴즈해", "문제해", "테스트해"],
   review: ["복습", "리뷰", "다시보기", "다시 보기", "복", "복습해", "리뷰해", "복습모드"],
@@ -235,6 +245,17 @@ const COMMAND_PHRASES: Record<string, string[]> = {
   textbookConvert: ["교재변환", "교재 변환", "교재", "PDF변환", "PDF 변환", "교재변환해", "교재 변환해", "교재해", "PDF변환해"],
   compress: ["텍스트압축", "텍스트 압축", "압축", "지문압축", "지문 압축", "압축해", "텍스트압축해", "지문압축해"],
   repeat: ["문장반복", "문장 반복", "반복", "문장", "문장반복해", "문장 반복해"],
+  
+  // 새로운 Jeomgeuli-Suneung 메뉴
+  textbook: ["수능특강", "수능특강 학습", "특강", "교재", "수능특강해", "특강해", "교재해"],
+  passage: ["국어 지문", "지문 연습", "지문", "국어", "지문 연습해", "지문해", "국어해"],
+  graphTable: ["그래프 도표", "그래프", "도표", "그래프 해석", "도표 해석", "그래프도표", "그래프해석", "도표해석"],
+  question: ["문항 풀이", "문항", "문제 풀이", "오답노트", "문항해", "문제해", "오답"],
+  vocab: ["어휘 시사", "어휘", "시사", "어휘 학습", "시사 학습", "어휘시사", "어휘해", "시사해"],
+  brailleSpeed: ["점자 속도", "속도 훈련", "점자 속도 훈련", "속도", "점자속도", "속도훈련"],
+  examMode: ["실전 모의고사", "모의고사", "실전", "모의고사해", "실전해"],
+  examTimer: ["시험시간", "시간 관리", "시험시간 관리", "타이머", "시험시간해", "타이머해"],
+  
   home: ["홈", "메인", "처음으로", "홈으로", "홈으로가", "메인으로", "집"],
   back: ["뒤로", "이전", "뒤로가기", "이전으로", "돌아가기", "뒤", "뒤로가", "이전으로가"],
   menu: ["메뉴", "목록", "메뉴보기", "목록보기"],

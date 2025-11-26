@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import AppShellMobile from "../components/ui/AppShellMobile";
 import SpeechBar from "../components/input/SpeechBar";
 import ToastA11y from "../components/system/ToastA11y";
-import { convertBraille, saveReview } from "@/lib/api";
+import { brailleAPI } from "../lib/api/BrailleAPI";
+import { learningAPI } from "../lib/api/LearningAPI";
 import { useTTS } from "../hooks/useTTS";
 import useSTT from "../hooks/useSTT";
 import useVoiceCommands from "../hooks/useVoiceCommands";
@@ -147,7 +148,7 @@ export default function FreeConvert() {
       setError(null);
 
       // 백엔드 점자 변환 API 사용
-      const res = await convertBraille(text);
+      const res = await brailleAPI.convertBraille(text);
       console.log('[FreeConvert] API response:', res);
       const raw = (res as any)?.cells ?? res;
       console.log('[FreeConvert] Raw cells:', raw);
@@ -196,9 +197,9 @@ export default function FreeConvert() {
         segments: conversion.segments,
       };
 
-      const result = await saveReview("keyword", payload);
+      const result = await learningAPI.saveReview("keyword", payload);
       
-      if (result.ok) {
+      if (result) {
         // 성공 시 팝업 표시
         const successMessage = `"${conversion.original}"이(가) 복습 목록에 추가되었습니다.`;
         setToastMessage(successMessage);

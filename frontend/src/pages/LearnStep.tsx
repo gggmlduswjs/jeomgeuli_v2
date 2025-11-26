@@ -1,7 +1,8 @@
 // src/pages/LearnStep.tsx
 import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowLeft, SkipForward, RotateCcw } from "lucide-react";
-import { convertBraille, fetchLearn } from '@/lib/api';
+import { brailleAPI } from '@/lib/api/BrailleAPI';
+import { learningAPI } from '@/lib/api/LearningAPI';
 // import { api } from '@/api';
 // import { asStr, asStrArr } from '@/lib/safe';
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -11,6 +12,7 @@ import { localToBrailleCells } from "@/lib/braille";
 import type { LessonItem } from "@/lib/normalize";
 import type { LessonMode } from "@/store/lessonSession";
 import { saveLessonSession } from "@/store/lessonSession";
+import type { LearnItem } from "@/types/api";
 import useTTS from '../hooks/useTTS';
 import useSTT from '../hooks/useSTT';
 import useVoiceCommands from '../hooks/useVoiceCommands';
@@ -18,14 +20,34 @@ import { useVoiceStore } from '../store/voice';
 import SpeechBar from '../components/input/SpeechBar';
 import AppShellMobile from '../components/ui/AppShellMobile';
 
-function Dot({ on }: { on: boolean }) {
-  return (
-    <span
-      className={`inline-block w-4 h-4 rounded-full mx-0.5 my-0.5 border-2 transition-all duration-200 ${
-        on ? "bg-primary border-primary shadow-sm" : "bg-card border-border"
-      }`}
-    />
-  );
+import BrailleDot from '../components/braille/BrailleDot';
+const Dot = BrailleDot;
+
+// LearnItem을 LessonItem으로 변환
+function convertLearnItemToLessonItem(item: LearnItem): LessonItem {
+  const cells: CellTuple[] = [];
+  
+  // cell이 있으면 변환
+  if (item.cell && Array.isArray(item.cell) && item.cell.length === 6) {
+    cells.push(item.cell.map(v => (v ? 1 : 0)) as CellTuple);
+  }
+  
+  // cells가 있으면 변환
+  if (item.cells && Array.isArray(item.cells)) {
+    item.cells.forEach(cell => {
+      if (Array.isArray(cell) && cell.length === 6) {
+        cells.push(cell.map(v => (v ? 1 : 0)) as CellTuple);
+      }
+    });
+  }
+  
+  return {
+    char: item.char,
+    word: item.word,
+    sentence: item.sentence,
+    name: item.name,
+    cells: cells.length > 0 ? cells : undefined,
+  };
 }
 
 function CellView({ c }: { c: CellTuple }) {
@@ -94,15 +116,18 @@ export default function LearnStep() {
     (async () => {
       try {
         console.log("[LearnStep] Starting to fetch learn data for mode:", mode);
-        const { title, items } = await fetchLearn(mode);
+        const { title, items } = await learningAPI.fetchLearn(mode);
         if (!alive) return;
         
         console.log("[LearnStep] fetched", { title, items });
         if (title) setTitle(title);
-        setItems(Array.isArray(items) ? items : []);
+        const convertedItems = Array.isArray(items) 
+          ? items.map(convertLearnItemToLessonItem)
+          : [];
+        setItems(convertedItems);
         // ✅ 로드되면 바로 0번 아이템부터 시작
-        setIdx(items.length ? 0 : -1);
-        saveLessonSession({ mode, items, createdAt: Date.now() });
+        setIdx(convertedItems.length ? 0 : -1);
+        saveLessonSession({ mode, items: convertedItems, createdAt: Date.now() });
       } finally {
         if (alive) setLoading(false);
       }
@@ -142,7 +167,7 @@ export default function LearnStep() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await convertBraille(heading, 'word');
+        const res = await brailleAPI.convertBraille(heading, 'word');
         const norm = normalizeCells(res.cells);
         if (!cancelled && norm.length) {
           cacheRef.current[key] = norm;

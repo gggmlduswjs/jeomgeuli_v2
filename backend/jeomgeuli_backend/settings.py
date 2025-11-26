@@ -48,6 +48,9 @@ INSTALLED_APPS = [
     "apps.learning",
     "apps.newsfeed",
     "apps.search",
+    "apps.vocab",
+    "apps.analytics",
+    "apps.explore",
 ]
 
 MIDDLEWARE = [

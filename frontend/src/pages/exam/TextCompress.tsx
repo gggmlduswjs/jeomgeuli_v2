@@ -6,7 +6,7 @@ import SpeechBar from '../../components/input/SpeechBar';
 import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
-import { compressText } from '../../lib/api';
+import { examAPI } from '../../lib/api/ExamAPI';
 import useBrailleBLE from '../../hooks/useBrailleBLE';
 import ToastA11y from '../../components/system/ToastA11y';
 import VoiceService from '../../services/VoiceService';
@@ -83,7 +83,7 @@ export default function TextCompress() {
     setError(null);
 
     try {
-      const result = await compressText(
+      const result = await examAPI.compressText(
         inputText,
         compressionMode,
         compressionMode === 'compressed' ? 0.3 : 0.1

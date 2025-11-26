@@ -1,39 +1,45 @@
-// src/lib/api.ts - API functions
+// src/lib/api.ts - Legacy API functions (DEPRECATED)
+// This file is kept for backward compatibility but should not be used in new code.
+// Use Facade APIs from lib/api/*.ts instead.
 
 import { http, apiBase } from './http';
-import { isAppError, toAppError, ErrorCode, type AppError } from '../types/errors';
+import { isAppError, toAppError } from '../types/errors';
 import performanceMonitor from './performance';
 
 export const API_BASE = apiBase;
 
-// Types
-export interface ChatResponse {
-  answer: string;
-  keywords?: string[];
-  ok?: boolean;
-  error?: string;
-}
+// Types are now in types/api.ts - re-exported for backward compatibility
+import type {
+  ChatResponse,
+  ExploreResponse,
+  BrailleConvertResponse,
+  LearnResponse,
+  Textbook,
+  Unit,
+  Question,
+  AnswerResult,
+  PassageStructure,
+  GraphPatterns,
+  TextbookConvertResponse,
+  CompressTextResponse,
+  SentenceSummaryResponse,
+} from '../types/api';
 
-export interface ExploreResponse {
-  answer: string;
-  news: any[];
-  query: string;
-  ok?: boolean;
-  error?: string;
-}
-
-export interface BrailleConvertResponse {
-  cells: number[][];
-  ok?: boolean;
-  error?: string;
-}
-
-export interface LearnResponse {
-  mode?: string;
-  title?: string;
-  items: any[];
-  ok?: boolean;
-}
+export type {
+  ChatResponse,
+  ExploreResponse,
+  BrailleConvertResponse,
+  LearnResponse,
+  Textbook,
+  Unit,
+  Question,
+  AnswerResult,
+  PassageStructure,
+  GraphPatterns,
+  TextbookConvertResponse,
+  CompressTextResponse,
+  SentenceSummaryResponse,
+};
 
 // Chat API
 export async function askChat(query: string): Promise<ChatResponse> {
@@ -214,31 +220,7 @@ export function normalizeAnswer(response: ChatResponse | null | undefined): stri
   return response.answer || '';
 }
 
-// Exam API Types
-export interface TextbookConvertResponse {
-  braille_cells: number[][];
-  braille_text: string;
-  original_text: string;
-  text_length: number;
-  cells_count: number;
-  pages_count: number;
-  error?: string;
-}
-
-export interface CompressTextResponse {
-  compressed_text: string;
-  original_length: number;
-  compressed_length: number;
-  compression_ratio: number;
-  mode: string;
-  error?: string;
-}
-
-export interface SentenceSummaryResponse {
-  summary: string;
-  original: string;
-  error?: string;
-}
+// Types moved to types/api.ts - see re-export at top of file
 
 // Exam API Functions
 export async function convertTextbook(pdfFile: File): Promise<TextbookConvertResponse> {
@@ -310,6 +292,212 @@ export async function getSentenceSummary(sentence: string): Promise<string> {
     performanceMonitor.measureAPICall('getSentenceSummary', duration, false);
     console.error('[API] getSentenceSummary error:', error);
     return ''; // 실패 시 빈 문자열 반환 (선택적 기능이므로)
+  }
+}
+
+// Types moved to types/api.ts - see re-export at top of file
+
+// New Jeomgeuli-Suneung API Functions
+export async function listTextbooks(): Promise<Textbook[]> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get('/exam/textbook/');
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('listTextbooks', duration, true);
+    return response.textbooks || [];
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('listTextbooks', duration, false);
+    console.error('[API] listTextbooks error:', error);
+    return [];
+  }
+}
+
+export async function listUnits(textbookId: number): Promise<Unit[]> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get(`/exam/textbook/${textbookId}/units/`);
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('listUnits', duration, true);
+    return response.units || [];
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('listUnits', duration, false);
+    console.error('[API] listUnits error:', error);
+    return [];
+  }
+}
+
+export async function getUnit(unitId: number): Promise<Unit | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get(`/exam/unit/${unitId}/`);
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getUnit', duration, true);
+    return response.unit || null;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getUnit', duration, false);
+    console.error('[API] getUnit error:', error);
+    return null;
+  }
+}
+
+export async function getQuestion(questionId: number): Promise<Question | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get(`/exam/question/${questionId}/`);
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getQuestion', duration, true);
+    return response.question || null;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getQuestion', duration, false);
+    console.error('[API] getQuestion error:', error);
+    return null;
+  }
+}
+
+export async function submitAnswer(questionId: number, answer: number, responseTime?: number): Promise<AnswerResult | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/exam/submit/', {
+      question_id: questionId,
+      answer,
+      response_time: responseTime,
+    });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('submitAnswer', duration, true);
+    return {
+      is_correct: response.is_correct,
+      correct_answer: response.correct_answer,
+      explanation: response.explanation,
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('submitAnswer', duration, false);
+    console.error('[API] submitAnswer error:', error);
+    return null;
+  }
+}
+
+export async function startExam(): Promise<{ exam_id: number; started_at: string } | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/exam/start/');
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('startExam', duration, true);
+    return {
+      exam_id: response.exam_id,
+      started_at: response.started_at,
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('startExam', duration, false);
+    console.error('[API] startExam error:', error);
+    return null;
+  }
+}
+
+export async function analyzePassage(passage: string): Promise<PassageStructure | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/learn/passage-analyze/', { passage });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('analyzePassage', duration, true);
+    return response.structure || null;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('analyzePassage', duration, false);
+    console.error('[API] analyzePassage error:', error);
+    return null;
+  }
+}
+
+export async function analyzeGraph(imageFile: File): Promise<GraphPatterns | null> {
+  const startTime = Date.now();
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    const response = await http.postFormData('/exam/graph-analyze/', formData);
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('analyzeGraph', duration, true);
+    return response.patterns || null;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('analyzeGraph', duration, false);
+    console.error('[API] analyzeGraph error:', error);
+    return null;
+  }
+}
+
+export async function getTodayVocab(): Promise<{ vocab: any[]; sisa: any[] } | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get('/vocab/today/');
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getTodayVocab', duration, true);
+    return {
+      vocab: response.vocab || [],
+      sisa: response.sisa || [],
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getTodayVocab', duration, false);
+    console.error('[API] getTodayVocab error:', error);
+    return null;
+  }
+}
+
+export async function getNews(): Promise<{ news: any[]; sisa: any[] } | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.get('/explore/news/');
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getNews', duration, true);
+    return {
+      news: response.news || [],
+      sisa: response.sisa || [],
+    };
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('getNews', duration, false);
+    console.error('[API] getNews error:', error);
+    return null;
+  }
+}
+
+export async function generateBraillePattern(
+  type: 'answer' | 'trend' | 'number' | 'status',
+  data: any
+): Promise<number[] | null> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/braille/pattern/', { type, data });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('generateBraillePattern', duration, true);
+    return response.pattern || null;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('generateBraillePattern', duration, false);
+    console.error('[API] generateBraillePattern error:', error);
+    return null;
+  }
+}
+
+export async function logAnalytics(type: string, data: any): Promise<boolean> {
+  const startTime = Date.now();
+  try {
+    const response = await http.post('/analytics/log/', { type, ...data });
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('logAnalytics', duration, true);
+    return response.ok === true;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.measureAPICall('logAnalytics', duration, false);
+    console.error('[API] logAnalytics error:', error);
+    return false;
   }
 }
 

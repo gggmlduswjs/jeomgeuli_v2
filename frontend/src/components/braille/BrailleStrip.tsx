@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import BrailleCell from "./BrailleCell";
-import { convertBraille } from "@/lib/api";
+import { brailleAPI } from "@/lib/api/BrailleAPI";
 import { normalizeCells } from "@/lib/brailleSafe";
 
 type DotArray = [boolean, boolean, boolean, boolean, boolean, boolean];
@@ -27,8 +27,8 @@ export default function BrailleStrip({ text, size = "normal" }: BrailleStripProp
       setCells([]);
 
       try {
-        // convertBraille(text, mode) → 서버 구현에 따라 { ok, cells, error } 또는 직접 배열 반환 가능
-        const result = await convertBraille(text, "word");
+        // brailleAPI.convertBraille(text, mode) → 서버 구현에 따라 { ok, cells, error } 또는 직접 배열 반환 가능
+        const result = await brailleAPI.convertBraille(text, "word");
         const raw = (result && "cells" in result ? result.cells : result) as unknown;
 
         // 다양한 형태를 모두 6칸 불리언 배열로 정규화

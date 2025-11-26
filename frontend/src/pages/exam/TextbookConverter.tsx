@@ -6,7 +6,7 @@ import SpeechBar from '../../components/input/SpeechBar';
 import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
-import { convertTextbook } from '../../lib/api';
+import { examAPI } from '../../lib/api/ExamAPI';
 import useBrailleBLE from '../../hooks/useBrailleBLE';
 import ToastA11y from '../../components/system/ToastA11y';
 import VoiceService from '../../services/VoiceService';
@@ -96,7 +96,7 @@ export default function TextbookConverter() {
     setError(null);
 
     try {
-      const result = await convertTextbook(pdfFile);
+      const result = await examAPI.convertTextbook(pdfFile);
       setConversionResult(result);
       
       speak(`변환 완료. 총 ${result.pages_count}페이지, ${result.cells_count}개 점자 셀로 변환되었습니다.`);

@@ -4,8 +4,15 @@ import PyPDF2
 import io
 import os
 import json
+import re
+from pathlib import Path
 from utils.braille_converter import text_to_cells
 import google.generativeai as genai
+from .models import Textbook, Unit, Question, QuestionAttempt, GraphTableItem
+from .services import (
+    TextbookService, UnitService, QuestionService, GraphAnalysisService,
+    ExamSessionService, BrailleConversionService
+)
 
 
 def convert_cells_to_brl(cells):
@@ -192,4 +199,382 @@ def get_sentence_summary(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': f'요약 중 오류: {str(e)}'}, status=500)
+
+
+# New Jeomgeuli-Suneung endpoints
+
+@csrf_exempt
+def list_textbooks(request):
+    """교재 목록 조회"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET만 지원'}, status=405)
+    
+    try:
+        service = TextbookService()
+        subject = request.GET.get('subject')
+        textbooks = service.list_textbooks(subject=subject)
+        return JsonResponse({
+            'ok': True,
+            'textbooks': textbooks,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def list_units(request, textbook_id):
+    """교재별 단원 목록 조회"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET만 지원'}, status=405)
+    
+    try:
+        service = UnitService()
+        units = service.list_units(textbook_id)
+        return JsonResponse({
+            'ok': True,
+            'units': units,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def get_unit(request, unit_id):
+    """단원 내용 조회"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET만 지원'}, status=405)
+    
+    try:
+        service = UnitService()
+        unit = service.get_unit(unit_id)
+        if not unit:
+            return JsonResponse({'error': '단원을 찾을 수 없습니다'}, status=404)
+        return JsonResponse({
+            'ok': True,
+            'unit': unit,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def get_question(request, question_id):
+    """문제 조회"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET만 지원'}, status=405)
+    
+    try:
+        service = QuestionService()
+        question = service.get_question(question_id)
+        if not question:
+            return JsonResponse({'error': '문제를 찾을 수 없습니다'}, status=404)
+        return JsonResponse({
+            'ok': True,
+            'question': question,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def submit_answer(request):
+    """답안 제출"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST만 지원'}, status=405)
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        question_id = data.get('question_id')
+        user_answer = data.get('answer')
+        response_time = data.get('response_time')
+        
+        if not question_id or not user_answer:
+            return JsonResponse({'error': 'question_id와 answer가 필요합니다'}, status=400)
+        
+        service = QuestionService()
+        result = service.submit_answer(question_id, user_answer, response_time)
+        
+        return JsonResponse({
+            'ok': True,
+            **result,
+        })
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': '잘못된 JSON 형식입니다'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def start_exam(request):
+    """시험 시작"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST만 지원'}, status=405)
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        total_questions = data.get('total_questions', 0)
+        
+        # ExamSessionService를 사용하여 시험 세션 생성
+        service = ExamSessionService()
+        result = service.start_exam(total_questions=total_questions)
+        
+        return JsonResponse({
+            'ok': True,
+            'exam_id': result['exam_id'],
+            'started_at': result['started_at'],
+            'total_questions': result['total_questions'],
+            'status': result['status'],
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'error': '잘못된 JSON 형식입니다'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def analyze_graph(request):
+    """그래프/도표 분석 및 패턴 추출"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST만 지원'}, status=405)
+    
+    try:
+        # TODO: 실제 구현 - Vision API로 그래프 분석
+        image_file = request.FILES.get('image')
+        title = request.POST.get('title', '')
+        
+        if not image_file:
+            return JsonResponse({'error': '이미지 파일이 필요합니다'}, status=400)
+        
+        # 이미지 데이터 읽기
+        image_data = image_file.read()
+        
+        service = GraphAnalysisService()
+        result = service.analyze_graph(image_data, title)
+        
+        return JsonResponse({
+            'ok': True,
+            **result,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def extract_textbook_info(filename: str) -> dict:
+    """
+    파일명에서 교재 정보 추출
+    예: "수능특강_국어_2024.pdf" → {title: "수능특강 국어", subject: "국어", year: 2024}
+    """
+    # 확장자 제거
+    name = filename.replace('.pdf', '').replace('.PDF', '')
+    
+    # 패턴 매칭
+    patterns = [
+        r'(.+?)_(\w+)_(\d{4})',  # 수능특강_국어_2024
+        r'(.+?)\s+(\w+)\s+(\d{4})',  # 수능특강 국어 2024
+        r'(.+?)_(\d{4})',  # 수능특강_2024
+        r'(.+?)\s+(\d{4})',  # 수능특강 2024
+    ]
+    
+    for pattern in patterns:
+        match = re.match(pattern, name)
+        if match:
+            if len(match.groups()) == 3:
+                title, subject, year = match.groups()
+                return {
+                    'title': f"{title} {subject}",
+                    'subject': subject,
+                    'year': int(year),
+                    'publisher': 'EBS'  # 기본값
+                }
+            elif len(match.groups()) == 2:
+                title, year = match.groups()
+                # year가 숫자인지 확인
+                if year.isdigit():
+                    return {
+                        'title': title,
+                        'subject': '',
+                        'year': int(year),
+                        'publisher': 'EBS'
+                    }
+                else:
+                    # year가 과목일 수도 있음
+                    return {
+                        'title': f"{title} {year}",
+                        'subject': year,
+                        'year': None,
+                        'publisher': 'EBS'
+                    }
+    
+    # 매칭 실패 시 파일명을 그대로 사용
+    return {
+        'title': name,
+        'subject': '',
+        'year': None,
+        'publisher': 'EBS'
+    }
+
+
+def extract_units_from_text(text: str) -> list:
+    """
+    텍스트에서 단원 정보 추출 (간단한 패턴 매칭)
+    """
+    units = []
+    
+    # 간단한 패턴 매칭: "1단원", "제1장", "Chapter 1" 등
+    unit_patterns = [
+        r'(\d+)단원[:\s]+(.+?)(?=\d+단원|$|제\d+장|Chapter\s+\d+)',
+        r'제(\d+)장[:\s]+(.+?)(?=제\d+장|$|\d+단원|Chapter\s+\d+)',
+        r'Chapter\s+(\d+)[:\s]+(.+?)(?=Chapter\s+\d+|$|\d+단원|제\d+장)',
+        r'제(\d+)과[:\s]+(.+?)(?=제\d+과|$|\d+단원)',
+    ]
+    
+    for pattern in unit_patterns:
+        matches = re.finditer(pattern, text, re.MULTILINE | re.DOTALL)
+        for match in matches:
+            order = int(match.group(1))
+            content = match.group(2).strip()[:2000]  # 최대 2000자
+            if content and len(content) > 50:  # 최소 50자 이상
+                units.append({
+                    'order': order,
+                    'title': f"{order}단원",
+                    'content': content
+                })
+    
+    # 중복 제거 (order 기준)
+    seen_orders = set()
+    unique_units = []
+    for unit in units:
+        if unit['order'] not in seen_orders:
+            seen_orders.add(unit['order'])
+            unique_units.append(unit)
+    units = sorted(unique_units, key=lambda x: x['order'])
+    
+    return units
+
+
+@csrf_exempt
+def upload_pdf(request):
+    """
+    PDF 업로드 → 텍스트 추출 → 단원 분리 → Textbook/Unit 생성 → 백그라운드 점자 변환
+    POST /api/exam/textbook/upload-pdf/
+    FormData: { pdf: File }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST만 지원'}, status=405)
+    
+    pdf_file = request.FILES.get('pdf')
+    if not pdf_file:
+        return JsonResponse({'error': 'PDF 파일이 필요합니다'}, status=400)
+    
+    try:
+        # PDF 텍스트 추출
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+        for page in pdf_reader.pages:
+            try:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            except Exception as e:
+                print(f"[upload_pdf] 페이지 추출 실패: {e}")
+                continue
+        
+        if not text.strip():
+            return JsonResponse({'error': 'PDF에서 텍스트를 추출할 수 없습니다'}, status=400)
+        
+        # 교재 정보 추출
+        textbook_info = extract_textbook_info(pdf_file.name)
+        
+        # 단원 추출
+        units_data = extract_units_from_text(text)
+        
+        if not units_data:
+            # 단원을 찾지 못한 경우 전체를 하나의 단원으로
+            units_data = [{
+                'order': 1,
+                'title': '전체',
+                'content': text[:5000]  # 처음 5000자
+            }]
+        
+        # Textbook 생성 또는 조회
+        textbook, created = Textbook.objects.get_or_create(
+            title=textbook_info['title'],
+            year=textbook_info['year'],
+            defaults={
+                'publisher': textbook_info['publisher'],
+                'subject': textbook_info['subject'],
+            }
+        )
+        
+        if not created:
+            # 이미 존재하는 교재인 경우
+            return JsonResponse({
+                'ok': True,
+                'textbook_id': textbook.id,
+                'unit_count': 0,
+                'message': '이미 존재하는 교재입니다.',
+                'existing': True,
+            })
+        
+        # Unit 생성
+        unit_ids = []
+        for unit_data in units_data:
+            unit = Unit.objects.create(
+                textbook=textbook,
+                title=unit_data['title'],
+                order=unit_data['order'],
+                content=unit_data['content']
+            )
+            unit_ids.append(unit.id)
+        
+        # 백그라운드 점자 변환 시작 (동기적으로 실행 - 나중에 Celery로 변경 가능)
+        conversion_service = BrailleConversionService()
+        for unit_id in unit_ids:
+            try:
+                # 비동기로 실행하려면 여기서 Celery 태스크를 호출
+                # 현재는 동기적으로 실행 (나중에 개선)
+                conversion_service.convert_unit_to_braille(unit_id, textbook.subject)
+            except Exception as e:
+                print(f"[upload_pdf] 점자 변환 실패 (unit_id={unit_id}): {e}")
+                # 변환 실패해도 계속 진행
+        
+        return JsonResponse({
+            'ok': True,
+            'textbook_id': textbook.id,
+            'unit_count': len(unit_ids),
+            'message': 'PDF 업로드 및 점자 변환 완료',
+        })
+        
+    except PyPDF2.errors.PdfReadError:
+        return JsonResponse({'error': 'PDF 파일이 손상되었거나 읽을 수 없습니다'}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'처리 중 오류: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+def get_braille_status(request, unit_id):
+    """
+    단원의 점자 변환 상태 조회
+    GET /api/exam/unit/<unit_id>/braille-status/
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET만 지원'}, status=405)
+    
+    try:
+        service = BrailleConversionService()
+        status = service.get_braille_status(unit_id)
+        
+        if not status:
+            return JsonResponse({'error': '단원을 찾을 수 없습니다'}, status=404)
+        
+        return JsonResponse({
+            'ok': True,
+            **status,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 

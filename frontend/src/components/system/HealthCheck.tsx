@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { health } from '@/lib/api';
+import { http } from '@/lib/http';
 
 interface HealthCheckProps {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ export default function HealthCheck({ children }: HealthCheckProps) {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const result = await health();
+        const result = await http.get('/health/');
         setIsHealthy(result?.ok === true);
         setError(null);
       } catch (e: any) {

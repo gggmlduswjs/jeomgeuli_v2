@@ -255,18 +255,48 @@ GET /api/learn/sentences/
 
 ## 프론트엔드 사용 예시
 
-### TypeScript/React
+### Facade API 사용 (권장)
+
+프로젝트는 Facade Pattern을 사용하여 API 호출을 단순화했습니다. 각 도메인별 Facade API를 사용하세요.
 
 ```typescript
-import { fetchExplore, convertBraille } from '@/lib/api';
+// Facade API import
+import { chatAPI } from '@/lib/api/ChatAPI';
+import { brailleAPI } from '@/lib/api/BrailleAPI';
+import { examAPI } from '@/lib/api/ExamAPI';
+import { learnAPI } from '@/lib/api/LearnAPI';
+import { learningAPI } from '@/lib/api/LearningAPI';
+import { vocabAPI } from '@/lib/api/VocabAPI';
 
 // 정보 탐색
-const result = await fetchExplore('오늘 날씨');
+const result = await chatAPI.fetchExplore('오늘 날씨');
 console.log(result.answer);
 
 // 점자 변환
-const braille = await convertBraille('안녕하세요');
+const braille = await brailleAPI.convertBraille('안녕하세요');
 console.log(braille.cells);
+
+// 교재 목록 조회
+const textbooks = await examAPI.listTextbooks();
+
+// 학습 데이터 조회
+const learnData = await learnAPI.fetchLearn('chars');
+
+// 어휘 조회
+const vocab = await vocabAPI.getTodayVocab();
+```
+
+### 레거시 API (Deprecated)
+
+`lib/api.ts`의 레거시 함수들은 더 이상 사용하지 않습니다. Facade API로 마이그레이션하세요.
+
+```typescript
+// ❌ 사용하지 않음
+import { fetchExplore, convertBraille } from '@/lib/api';
+
+// ✅ 권장
+import { chatAPI } from '@/lib/api/ChatAPI';
+import { brailleAPI } from '@/lib/api/BrailleAPI';
 ```
 
 ### 에러 처리

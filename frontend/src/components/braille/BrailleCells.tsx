@@ -1,5 +1,5 @@
 
-import { convertBraille } from '@/lib/api';
+import { brailleAPI } from '@/lib/api/BrailleAPI';
 import { useState, useEffect } from 'react';
 
 interface BrailleCellsProps {
@@ -55,7 +55,7 @@ export function BrailleCells({ data, className = "" }: BrailleCellsProps) {
       
       for (const keyword of data) {
         try {
-          const result = await convertBraille(keyword, 'word');
+          const result = await brailleAPI.convertBraille(keyword, 'word');
           if (result.ok && result.cells && Array.isArray(result.cells)) {
             converted[keyword] = result.cells;
           }
