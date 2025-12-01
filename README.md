@@ -91,20 +91,46 @@ npm run dev
 \`\`\`
 
 ### 4. 접속
-- 프론트엔드: http://localhost:3000
+- 프론트엔드: http://localhost:5173 (Vite 기본 포트)
 - 백엔드 API: http://localhost:8000
 
 ## API 엔드포인트
 
-### 채팅 API
-- \`POST /api/chat/ask\` - 질문 및 답변 처리
+주요 API 엔드포인트 목록입니다. 자세한 내용은 [API 문서](./docs/API.md)를 참고하세요.
+
+### 채팅/정보 탐색 API
+- \`POST /api/chat/ask/\` - 질문 및 답변 처리
+- \`POST /api/chat/explore/\` 또는 \`GET /api/explore/\` - 정보 탐색 (뉴스 + AI)
+- \`GET /api/chat/news/\` - 네이버 뉴스 API 프록시
 
 ### 학습 API
-- \`GET /api/learn/next/?mode={mode}\` - 다음 학습 내용 조회
-- \`POST /api/learn/test/\` - 테스트 결과 제출
+- \`GET /api/learn/{mode}/\` - 학습 데이터 조회 (chars, words, sentences, keywords)
+- \`POST /api/learn/passage-analyze/\` - 지문 분석
+- \`POST /api/learn/extract-keywords/\` - 핵심 키워드 추출
+- \`POST /api/learn/extract-key/\` - 핵심 문장 추출
 
 ### 점자 API
-- \`POST /api/braille/output/\` - 점자 출력 요청 (하드웨어 연동용)
+- \`POST /api/braille/convert/\` - 텍스트 → 점자 변환
+- \`POST /api/braille/pattern/\` - 점자 패턴 생성
+- \`POST /api/braille/formula/\` - 수식 점자 변환
+
+### 복습 API
+- \`GET /api/learning/list/\` - 복습 목록 조회
+- \`POST /api/learning/save/\` - 복습 항목 저장
+- \`POST /api/learning/enqueue/\` - 복습 큐 추가
+
+### 시험/교재 API (Jeomgeuli-Suneung)
+- \`GET /api/exam/textbook/\` - 교재 목록 조회
+- \`POST /api/exam/textbook/upload-pdf/\` - PDF 교재 업로드
+- \`GET /api/exam/unit/{id}/\` - 단원 상세 조회
+- \`GET /api/exam/question/{id}/\` - 문제 상세 조회
+- \`POST /api/exam/submit/\` - 답안 제출
+
+### 어휘 API
+- \`GET /api/vocab/today/\` - 오늘의 어휘 조회
+
+### 기타 API
+- \`GET /api/health/\` - 서버 상태 확인
 
 ## 사용법
 
@@ -141,32 +167,49 @@ npm run dev
 jeomgeuli/
 ├── backend/                 # Django 백엔드
 │   ├── apps/               # Django 앱들
-│   │   ├── chat/          # 채팅 API
-│   │   ├── learn/         # 학습 API
-│   │   └── braille/       # 점자 출력 API
+│   │   ├── chat/          # 채팅/AI 앱
+│   │   ├── learn/         # 학습 데이터 앱
+│   │   ├── learning/      # 학습 관리/복습 앱
+│   │   ├── braille/       # 점자 변환 앱
+│   │   ├── exam/          # 시험/교재 앱 (Jeomgeuli-Suneung)
+│   │   ├── vocab/         # 어휘 앱
+│   │   ├── explore/        # 정보 탐색 앱
+│   │   ├── analytics/      # 분석 앱
+│   │   ├── newsfeed/       # 뉴스 피드 앱
+│   │   └── search/         # 검색 앱
 │   ├── jeomgeuli_backend/ # Django 설정
+│   ├── utils/              # 공통 유틸리티
+│   ├── data/               # 정적 데이터 (JSON)
 │   └── requirements.txt
 ├── frontend/               # React 프론트엔드
 │   ├── src/
 │   │   ├── components/    # UI 컴포넌트
 │   │   ├── pages/         # 페이지 컴포넌트
 │   │   ├── hooks/         # 커스텀 훅
-│   │   ├── services/      # API 서비스
-│   │   └── store/         # 상태 관리
+│   │   ├── services/      # 서비스 레이어
+│   │   ├── lib/           # 라이브러리 (API, 유틸)
+│   │   ├── store/         # 상태 관리 (Zustand)
+│   │   └── types/         # TypeScript 타입
 │   └── package.json
+├── docs/                   # 문서
 └── README.md
 \`\`\`
+
+자세한 구조는 [프로젝트 구조 문서](./PROJECT_STRUCTURE.md)를 참고하세요.
 
 ### 환경 변수
 \`\`\`env
 # Backend (.env)
 GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here  # 선택사항
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1,8000
 
 # Frontend (.env)
 VITE_API_URL=http://localhost:8000/api
 \`\`\`
+
+**참고**: Gemini API Key는 필수이며, OpenAI API Key는 선택사항입니다. OpenAI를 사용하지 않으면 Gemini만 사용합니다.
 
 ## 라이선스
 

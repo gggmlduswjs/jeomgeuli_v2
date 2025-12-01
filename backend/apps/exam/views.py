@@ -9,9 +9,18 @@ from pathlib import Path
 from utils.braille_converter import text_to_cells
 import google.generativeai as genai
 from .models import Textbook, Unit, Question, QuestionAttempt, GraphTableItem
-from .services import (
-    TextbookService, UnitService, QuestionService, GraphAnalysisService,
-    ExamSessionService, BrailleConversionService
+# exam_services.py에서 직접 import (services/ 디렉토리와 구분)
+from . import exam_services
+TextbookService = exam_services.TextbookService
+UnitService = exam_services.UnitService
+QuestionService = exam_services.QuestionService
+GraphAnalysisService = exam_services.GraphAnalysisService
+ExamSessionService = exam_services.ExamSessionService
+BrailleConversionService = exam_services.BrailleConversionService
+from core.decorators import handle_api_errors
+from core.exceptions import (
+    PDFProcessingException, BrailleConversionException,
+    AIAnalysisException, ValidationException, NotFoundException
 )
 
 
@@ -41,6 +50,7 @@ def convert_cells_to_brl(cells):
 
 
 @csrf_exempt
+@handle_api_errors
 def convert_textbook(request):
     """
     PDF 교재 → 점자 변환
@@ -48,11 +58,11 @@ def convert_textbook(request):
     FormData: { pdf: File }
     """
     if request.method != 'POST':
-        return JsonResponse({'error': 'POST만 지원'}, status=405)
+        raise ValidationException('POST만 지원', user_message='POST 요청만 지원됩니다.')
     
     pdf_file = request.FILES.get('pdf')
     if not pdf_file:
-        return JsonResponse({'error': 'PDF 파일이 필요합니다'}, status=400)
+        raise ValidationException('PDF 파일이 필요합니다', user_message='PDF 파일을 업로드해주세요.')
     
     try:
         # PDF → 텍스트 추출
@@ -64,10 +74,19 @@ def convert_textbook(request):
                 text += page_text + "\n"
         
         if not text.strip():
-            return JsonResponse({'error': 'PDF에서 텍스트를 추출할 수 없습니다'}, status=400)
+            raise PDFProcessingException(
+                'PDF에서 텍스트를 추출할 수 없습니다',
+                user_message='PDF 파일에서 텍스트를 추출할 수 없습니다. 이미지로만 구성된 PDF일 수 있습니다.'
+            )
         
         # 텍스트 → 점자 변환
-        braille_cells = text_to_cells(text)
+        try:
+            braille_cells = text_to_cells(text)
+        except Exception as e:
+            raise BrailleConversionException(
+                f'점자 변환 실패: {str(e)}',
+                user_message='점자 변환 중 오류가 발생했습니다.'
+            )
         
         # 점자 텍스트 생성 (선택적, .brl 형식)
         braille_text = convert_cells_to_brl(braille_cells)
@@ -80,12 +99,11 @@ def convert_textbook(request):
             'cells_count': len(braille_cells),
             'pages_count': len(pdf_reader.pages),
         })
-    except PyPDF2.errors.PdfReadError:
-        return JsonResponse({'error': 'PDF 파일이 손상되었거나 읽을 수 없습니다'}, status=400)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'error': f'변환 중 오류: {str(e)}'}, status=500)
+    except PyPDF2.errors.PdfReadError as e:
+        raise PDFProcessingException(
+            f'PDF 파일 읽기 실패: {str(e)}',
+            user_message='PDF 파일이 손상되었거나 읽을 수 없습니다.'
+        )
 
 
 @csrf_exempt
@@ -204,21 +222,19 @@ def get_sentence_summary(request):
 # New Jeomgeuli-Suneung endpoints
 
 @csrf_exempt
+@handle_api_errors
 def list_textbooks(request):
     """교재 목록 조회"""
     if request.method != 'GET':
-        return JsonResponse({'error': 'GET만 지원'}, status=405)
+        raise ValidationException('GET만 지원', user_message='GET 요청만 지원됩니다.')
     
-    try:
-        service = TextbookService()
-        subject = request.GET.get('subject')
-        textbooks = service.list_textbooks(subject=subject)
-        return JsonResponse({
-            'ok': True,
-            'textbooks': textbooks,
-        })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    service = TextbookService()
+    subject = request.GET.get('subject')
+    textbooks = service.list_textbooks(subject=subject)
+    return JsonResponse({
+        'ok': True,
+        'textbooks': textbooks,
+    })
 
 
 @csrf_exempt
@@ -239,41 +255,39 @@ def list_units(request, textbook_id):
 
 
 @csrf_exempt
+@handle_api_errors
 def get_unit(request, unit_id):
     """단원 내용 조회"""
     if request.method != 'GET':
-        return JsonResponse({'error': 'GET만 지원'}, status=405)
+        raise ValidationException('GET만 지원', user_message='GET 요청만 지원됩니다.')
     
-    try:
-        service = UnitService()
-        unit = service.get_unit(unit_id)
-        if not unit:
-            return JsonResponse({'error': '단원을 찾을 수 없습니다'}, status=404)
-        return JsonResponse({
-            'ok': True,
-            'unit': unit,
-        })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    service = UnitService()
+    unit = service.get_unit(unit_id)
+    if not unit:
+        raise NotFoundException(f'단원 ID {unit_id}를 찾을 수 없습니다', user_message='단원을 찾을 수 없습니다.')
+    
+    return JsonResponse({
+        'ok': True,
+        'unit': unit,
+    })
 
 
 @csrf_exempt
+@handle_api_errors
 def get_question(request, question_id):
     """문제 조회"""
     if request.method != 'GET':
-        return JsonResponse({'error': 'GET만 지원'}, status=405)
+        raise ValidationException('GET만 지원', user_message='GET 요청만 지원됩니다.')
     
-    try:
-        service = QuestionService()
-        question = service.get_question(question_id)
-        if not question:
-            return JsonResponse({'error': '문제를 찾을 수 없습니다'}, status=404)
-        return JsonResponse({
-            'ok': True,
-            'question': question,
-        })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    service = QuestionService()
+    question = service.get_question(question_id)
+    if not question:
+        raise NotFoundException(f'문제 ID {question_id}를 찾을 수 없습니다', user_message='문제를 찾을 수 없습니다.')
+    
+    return JsonResponse({
+        'ok': True,
+        'question': question,
+    })
 
 
 @csrf_exempt
@@ -455,6 +469,7 @@ def extract_units_from_text(text: str) -> list:
 
 
 @csrf_exempt
+@handle_api_errors
 def upload_pdf(request):
     """
     PDF 업로드 → 텍스트 추출 → 단원 분리 → Textbook/Unit 생성 → 백그라운드 점자 변환
@@ -462,11 +477,11 @@ def upload_pdf(request):
     FormData: { pdf: File }
     """
     if request.method != 'POST':
-        return JsonResponse({'error': 'POST만 지원'}, status=405)
+        raise ValidationException('POST만 지원', user_message='POST 요청만 지원됩니다.')
     
     pdf_file = request.FILES.get('pdf')
     if not pdf_file:
-        return JsonResponse({'error': 'PDF 파일이 필요합니다'}, status=400)
+        raise ValidationException('PDF 파일이 필요합니다', user_message='PDF 파일을 업로드해주세요.')
     
     try:
         # PDF 텍스트 추출
@@ -482,7 +497,10 @@ def upload_pdf(request):
                 continue
         
         if not text.strip():
-            return JsonResponse({'error': 'PDF에서 텍스트를 추출할 수 없습니다'}, status=400)
+            raise PDFProcessingException(
+                'PDF에서 텍스트를 추출할 수 없습니다',
+                user_message='PDF 파일에서 텍스트를 추출할 수 없습니다. 이미지로만 구성된 PDF일 수 있습니다.'
+            )
         
         # 교재 정보 추출
         textbook_info = extract_textbook_info(pdf_file.name)
@@ -529,30 +547,48 @@ def upload_pdf(request):
             )
             unit_ids.append(unit.id)
         
-        # 백그라운드 점자 변환 시작 (동기적으로 실행 - 나중에 Celery로 변경 가능)
-        conversion_service = BrailleConversionService()
+        # PDFDocument 생성 (비동기 처리용)
+        from .models import PDFDocument
+        import os
+        from django.core.files.storage import default_storage
+        
+        # PDF 파일 저장
+        pdf_path = default_storage.save(f'pdfs/{pdf_file.name}', pdf_file)
+        full_path = default_storage.path(pdf_path)
+        
+        pdf_doc = PDFDocument.objects.create(
+            textbook=textbook,
+            original_filename=pdf_file.name,
+            file_path=full_path,
+            file_size=pdf_file.size,
+            status='pending',
+            extracted_text=text,
+            progress=0
+        )
+        
+        # Celery 태스크로 비동기 처리 시작
+        from .tasks import process_pdf_async
+        task = process_pdf_async.delay(pdf_doc.id)
+        
+        # 점자 변환도 비동기로 시작
         for unit_id in unit_ids:
-            try:
-                # 비동기로 실행하려면 여기서 Celery 태스크를 호출
-                # 현재는 동기적으로 실행 (나중에 개선)
-                conversion_service.convert_unit_to_braille(unit_id, textbook.subject)
-            except Exception as e:
-                print(f"[upload_pdf] 점자 변환 실패 (unit_id={unit_id}): {e}")
-                # 변환 실패해도 계속 진행
+            from .tasks import convert_braille_async
+            convert_braille_async.delay(unit_id, textbook.subject)
         
         return JsonResponse({
             'ok': True,
             'textbook_id': textbook.id,
             'unit_count': len(unit_ids),
-            'message': 'PDF 업로드 및 점자 변환 완료',
+            'pdf_document_id': pdf_doc.id,
+            'task_id': task.id,
+            'message': 'PDF 업로드 완료. 분석 및 점자 변환은 백그라운드에서 진행됩니다.',
         })
         
-    except PyPDF2.errors.PdfReadError:
-        return JsonResponse({'error': 'PDF 파일이 손상되었거나 읽을 수 없습니다'}, status=400)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'error': f'처리 중 오류: {str(e)}'}, status=500)
+    except PyPDF2.errors.PdfReadError as e:
+        raise PDFProcessingException(
+            f'PDF 파일 읽기 실패: {str(e)}',
+            user_message='PDF 파일이 손상되었거나 읽을 수 없습니다.'
+        )
 
 
 @csrf_exempt

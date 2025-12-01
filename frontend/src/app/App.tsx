@@ -99,6 +99,13 @@ export default function App(){
               <Route path="/braille-speed" element={<BrailleSpeed />} />
               <Route path="/exam-mode" element={<ExamMode />} />
               <Route path="/exam-timer" element={<ExamTimer />} />
+              
+              {/* Legacy routes - 리다이렉트 */}
+              <Route path="/learn" element={<Textbook />} />
+              <Route path="/quiz" element={<Question />} />
+              <Route path="/review" element={<Question />} />
+              <Route path="/explore" element={<Vocab />} />
+              <Route path="/free-convert" element={<Textbook />} />
 
               {/* Legacy routes (backward compatibility) */}
               <Route path="/explore" element={<Explore />} />

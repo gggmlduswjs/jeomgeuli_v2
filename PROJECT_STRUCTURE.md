@@ -99,18 +99,19 @@ jeomgeuli-main/
 #### 📁 `lib/` - 라이브러리 및 유틸리티
 
 - **`http.ts`**: HTTP 클라이언트 유틸리티
-  - `get()`, `post()` 메서드 제공
+  - `get()`, `post()`, `postFormData()` 메서드 제공
   - API 베이스 URL 설정
   - `api`, `apiBase` export
 
-- **`api.ts`**: API 함수 모음
-  - `askChat()`, `askChatWithKeywords()`: 채팅 API
-  - `fetchExplore()`: 정보 탐색 API
-  - `convertBraille()`: 점자 변환 API
-  - `fetchLearn()`: 학습 데이터 API
-  - `saveReview()`: 복습 저장 API
-  - `health()`: 헬스 체크 API
-  - `normalizeAnswer()`: 답변 정규화 유틸
+- **`api.ts`**: 통합 API 함수 모음
+  - **채팅/정보 탐색**: `askChat()`, `askChatWithKeywords()`, `fetchExplore()`
+  - **점자 변환**: `convertBraille()`, `generateBraillePattern()`
+  - **학습**: `fetchLearn()`, `analyzePassage()`
+  - **복습**: `saveReview()`
+  - **시험/교재**: `listTextbooks()`, `listUnits()`, `getUnit()`, `getQuestion()`, `submitAnswer()`, `startExam()`, `convertTextbook()`, `compressText()`, `getSentenceSummary()`, `analyzeGraph()`
+  - **어휘**: `getTodayVocab()`, `getNews()`
+  - **분석**: `logAnalytics()`
+  - **기타**: `health()`, `normalizeAnswer()`
 
 - **`braille.ts`**: 점자 변환 유틸리티
   - `localToBrailleCells()`: 로컬 점자 변환 (API 폴백)
@@ -224,7 +225,11 @@ jeomgeuli-main/
 #### 📁 `braille/` - 점자 변환 앱 (리팩토링됨)
 - **`views.py`**: 점자 변환 뷰
   - `braille_convert()`: 텍스트→점자 변환
+  - `generate_pattern()`: 점자 패턴 생성
+  - `convert_formula()`: 수식 점자 변환
+  - `extract_formula()`: 수식 추출
   - `utils.braille_converter` 사용 (중복 제거)
+- **`services.py`**: 점자 서비스 로직
 
 #### 📁 `learn/` - 학습 데이터 앱 (리팩토링됨)
 - **`views.py`**: 학습 데이터 뷰
@@ -232,9 +237,13 @@ jeomgeuli-main/
   - `learn_word()`: 단어 학습 데이터
   - `learn_sentence()`: 문장 학습 데이터
   - `learn_keyword()`: 키워드 학습 데이터
+  - `analyze_passage()`: 지문 분석
+  - `extract_keywords()`: 핵심 키워드 추출
+  - `extract_passage_key()`: 핵심 문장 추출
   - `utils.data_loader` 사용 (중복 제거)
 
 - **`data.py`**: 데이터 로딩 유틸리티 (레거시)
+- **`services.py`**: 학습 서비스 로직
 - **`urls.py`**: 학습 URL 라우팅
 
 #### 📁 `learning/` - 학습 관리 앱 (리팩토링됨)
@@ -242,11 +251,61 @@ jeomgeuli-main/
   - `review_list()`: 복습 목록 조회
   - `review_save()`: 복습 항목 저장
   - `review_enqueue()`: 복습 큐 추가
-  - `utils.data_loader` 사용 (중복 제거)
+  - `review_add()`: 복습 항목 추가 (레거시)
+  - `review_today()`: 오늘의 복습 (레거시)
+  - DB 사용 (JSON 파일 대신)
 
 - **`models.py`**: 데이터베이스 모델
+  - `ReviewItem`: 복습 항목 모델
+  - `ReviewAttempt`: 복습 시도 기록 모델
+- **`repositories.py`**: 데이터 접근 계층
+  - `ReviewRepository`
 - **`srs.py`**: SRS(Spaced Repetition System) 알고리즘
 - **`migrations/`**: 데이터베이스 마이그레이션
+
+#### 📁 `exam/` - 시험/교재 앱 (Jeomgeuli-Suneung)
+- **`views.py`**: 시험 및 교재 뷰
+  - `list_textbooks()`: 교재 목록 조회
+  - `upload_pdf()`: PDF 교재 업로드
+  - `list_units()`: 단원 목록 조회
+  - `get_unit()`: 단원 상세 조회
+  - `get_question()`: 문제 상세 조회
+  - `submit_answer()`: 답안 제출
+  - `start_exam()`: 시험 시작
+  - `analyze_graph()`: 그래프 분석
+  - `convert_textbook()`: 교재 변환 (레거시)
+  - `compress_text()`: 텍스트 압축
+  - `get_sentence_summary()`: 문장 요약
+- **`repositories.py`**: 데이터 접근 계층
+  - `TextbookRepository`, `UnitRepository`, `QuestionRepository`
+- **`services.py`**: 비즈니스 로직
+  - `ExamSessionService`, `PassageAnalysisService`
+- **`models.py`**: 데이터베이스 모델
+  - `Textbook`, `Unit`, `Question`, `ExamSession`, `BrailleContent`
+- **`urls.py`**: 시험 URL 라우팅
+
+#### 📁 `vocab/` - 어휘 앱
+- **`views.py`**: 어휘 뷰
+  - `today_vocab()`: 오늘의 어휘 조회
+  - `mark_vocab_learned()`: 어휘 학습 완료 표시
+- **`repositories.py`**: 데이터 접근 계층
+- **`services.py`**: 비즈니스 로직
+- **`models.py`**: 데이터베이스 모델
+- **`urls.py`**: 어휘 URL 라우팅
+
+#### 📁 `explore/` - 정보 탐색 앱
+- **`views.py`**: 정보 탐색 뷰
+  - `get_news()`: 뉴스 피드 조회
+- **`services.py`**: 비즈니스 로직
+- **`urls.py`**: 탐색 URL 라우팅
+
+#### 📁 `analytics/` - 분석 앱
+- **`views.py`**: 분석 뷰
+  - `log_analytics()`: 분석 데이터 로깅
+- **`repositories.py`**: 데이터 접근 계층
+- **`services.py`**: 비즈니스 로직
+- **`models.py`**: 데이터베이스 모델
+- **`urls.py`**: 분석 URL 라우팅
 
 #### 📁 `newsfeed/` - 뉴스 피드 앱
 - **`views.py`**: 뉴스 피드 뷰
@@ -427,10 +486,13 @@ BLE 디바이스 연결
 
 ### Backend
 - **Django 4.2**: 웹 프레임워크
-- **OpenAI API**: GPT 모델
-- **Google Gemini**: AI 모델 (대체)
-- **SQLite**: 데이터베이스
+- **Django REST Framework**: REST API 지원
+- **OpenAI API**: GPT 모델 (선택사항)
+- **Google Gemini**: AI 모델 (기본)
+- **SQLite**: 데이터베이스 (개발용)
 - **CORS**: 크로스 오리진 지원
+- **Repository Pattern**: 데이터 접근 계층
+- **Service Layer Pattern**: 비즈니스 로직 분리
 
 ---
 
@@ -442,19 +504,25 @@ BLE 디바이스 연결
 - 음성 명령: `hooks/useVoiceCommands.ts`
 
 ### 점자 기능
-- 변환: `lib/api.ts` → `backend/apps/braille/views.py`
-- 표시: `components/Braille*.tsx`
+- 변환: `lib/api.ts` → `convertBraille()` → `backend/apps/braille/views.py`
+- 표시: `components/braille/*.tsx`
 - 재생: `hooks/useBraillePlayback.ts`
 - BLE: `hooks/useBrailleBLE.ts`
 
 ### 학습 기능
-- 데이터: `pages/LearnStep.tsx` → `backend/apps/learn/views.py`
+- 데이터: `pages/LearnStep.tsx` → `lib/api.ts` → `fetchLearn()` → `backend/apps/learn/views.py`
 - 퀴즈: `pages/Quiz.tsx`
-- 복습: `pages/Review.tsx` → `backend/apps/learning/views_review.py`
+- 복습: `pages/Review.tsx` → `lib/api.ts` → `saveReview()` → `backend/apps/learning/views_review.py`
 
 ### AI 기능
-- 채팅: `pages/Explore.tsx` → `backend/apps/chat/views.py`
-- 정보 탐색: `lib/api.ts` → `fetchExplore()`
+- 채팅: `pages/Explore.tsx` → `lib/api.ts` → `fetchExplore()` → `backend/apps/chat/views.py`
+- 정보 탐색: `lib/api.ts` → `fetchExplore()` → `backend/apps/chat/views.py` 또는 `backend/apps/explore/views.py`
+
+### 시험/교재 기능 (Jeomgeuli-Suneung)
+- 교재: `pages/Textbook/Textbook.tsx` → `lib/api.ts` → `listTextbooks()` → `backend/apps/exam/views.py`
+- 단원: `pages/Passage/Passage.tsx` → `lib/api.ts` → `getUnit()` → `backend/apps/exam/views.py`
+- 문제: `pages/Question/Question.tsx` → `lib/api.ts` → `getQuestion()`, `submitAnswer()` → `backend/apps/exam/views.py`
+- 어휘: `pages/Vocab/Vocab.tsx` → `lib/api.ts` → `getTodayVocab()` → `backend/apps/vocab/views.py`
 
 ---
 

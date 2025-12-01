@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Volume2, VolumeX, Home, BookOpen, Search, RefreshCw, Type } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, Home, BookOpen, HelpCircle, BookMarked, Timer } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AppShellMobileProps {
@@ -199,35 +199,35 @@ export default function AppShellMobile({
             />
             <NavButton
               icon={BookOpen}
-              label="학습"
-              onClick={() => navigate('/learn')}
-              isActive={isActive('/learn')}
-              ariaLabel="점자 학습"
-              ariaCurrent={isActive('/learn') ? 'page' : undefined}
+              label="교재"
+              onClick={() => navigate('/textbook')}
+              isActive={isActive('/textbook') || isActive('/passage')}
+              ariaLabel="교재 학습"
+              ariaCurrent={isActive('/textbook') || isActive('/passage') ? 'page' : undefined}
             />
             <NavButton
-              icon={Search}
-              label="탐색"
-              onClick={() => navigate('/explore')}
-              isActive={isActive('/explore')}
-              ariaLabel="정보 탐색"
-              ariaCurrent={isActive('/explore') ? 'page' : undefined}
+              icon={HelpCircle}
+              label="문항"
+              onClick={() => navigate('/question')}
+              isActive={isActive('/question') || isActive('/graph-table')}
+              ariaLabel="문항 풀이"
+              ariaCurrent={isActive('/question') || isActive('/graph-table') ? 'page' : undefined}
             />
             <NavButton
-              icon={RefreshCw}
-              label="복습"
-              onClick={() => navigate('/review')}
-              isActive={isActive('/review')}
-              ariaLabel="복습하기"
-              ariaCurrent={isActive('/review') ? 'page' : undefined}
+              icon={BookMarked}
+              label="어휘"
+              onClick={() => navigate('/vocab')}
+              isActive={isActive('/vocab')}
+              ariaLabel="어휘 학습"
+              ariaCurrent={isActive('/vocab') ? 'page' : undefined}
             />
             <NavButton
-              icon={Type}
-              label="자유"
-              onClick={() => navigate('/learn/free')}
-              isActive={isActive('/learn/free')}
-              ariaLabel="자유 변환"
-              ariaCurrent={isActive('/learn/free') ? 'page' : undefined}
+              icon={Timer}
+              label="시험"
+              onClick={() => navigate('/exam-mode')}
+              isActive={isActive('/exam-mode') || isActive('/exam-timer')}
+              ariaLabel="시험 모드"
+              ariaCurrent={isActive('/exam-mode') || isActive('/exam-timer') ? 'page' : undefined}
             />
           </div>
         </div>

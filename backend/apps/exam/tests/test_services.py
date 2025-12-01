@@ -3,7 +3,8 @@ Service Layer Unit Tests
 """
 from django.test import TestCase
 from apps.exam.models import Textbook, Unit, Question
-from apps.exam.services import (
+from apps.exam import exam_services
+from apps.exam.exam_services import (
     TextbookService, UnitService, QuestionService, ExamSessionService
 )
 
