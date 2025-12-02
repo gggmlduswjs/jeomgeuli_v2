@@ -8,7 +8,7 @@ import useVoiceCommands from '../../hooks/useVoiceCommands';
 import ToastA11y from '../../components/system/ToastA11y';
 import { BraillePatternFactory } from '../../lib/braillePattern';
 import useBrailleBLE from '../../hooks/useBrailleBLE';
-import { examAPI, type Question, type AnswerResult } from '../../lib/api/ExamAPI';
+import { examAPI, type Question, type AnswerResult } from '../../lib/api';
 import { useExamStore } from '../../store/examStore';
 import QuestionDisplay from '../Question/components/QuestionDisplay';
 import AnswerInput from '../Question/components/AnswerInput';

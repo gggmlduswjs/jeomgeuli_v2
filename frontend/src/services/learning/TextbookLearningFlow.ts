@@ -3,7 +3,7 @@
  * 교재 학습 플로우 구현
  */
 import { LearningFlow, LearningFlowState } from './LearningFlow';
-import { examAPI, Unit } from '../../lib/api/ExamAPI';
+import { examAPI, type Unit } from '../../lib/api';
 
 export class TextbookLearningFlow extends LearningFlow {
   private textbookId: number | null = null;

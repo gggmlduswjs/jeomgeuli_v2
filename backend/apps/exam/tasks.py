@@ -9,7 +9,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.utils import timezone
 
-from .models import PDFDocument, Textbook, Unit, BrailleContent
+from .models import PDFDocument, Textbook, Unit, BrailleContent, BrailleChunk
 from .parsers import PDFParser, OCRAnalyzer
 from . import exam_services
 from .services.graph_cv_analyzer import GraphCVAnalyzer
@@ -83,7 +83,7 @@ def process_pdf_async(self, pdf_document_id: int) -> Dict:
                 pdf_doc.save()
         
         # 단원 추출 및 Textbook/Unit 생성
-        from .views import extract_textbook_info, extract_units_from_text
+        from .utils.text_extractor import extract_textbook_info, extract_units_from_text
         
         textbook_info = extract_textbook_info(pdf_doc.original_filename)
         units_data = extract_units_from_text(text)
@@ -174,76 +174,36 @@ def convert_braille_async(self, unit_id: int, subject: str = None) -> Dict:
     """
     try:
         from . import exam_services
-        from .services.braille_encoding_engine import BrailleEncodingEngine
         BrailleConversionService = exam_services.BrailleConversionService
         
-        unit = Unit.objects.get(id=unit_id)
-        
-        # BrailleContent 생성
-        if not subject:
-            subject = unit.textbook.subject or 'korean'
-        
-        subject_lower = subject.lower()
-        if '수학' in subject_lower or subject_lower == 'math':
-            strategy = 'math'
-        elif '국어' in subject_lower or subject_lower == 'korean':
-            strategy = 'korean'
-        elif '영어' in subject_lower or subject_lower == 'english':
-            strategy = 'english'
-        elif '과학' in subject_lower or subject_lower == 'science':
-            strategy = 'science'
-        elif '사회' in subject_lower or subject_lower == 'social':
-            strategy = 'social'
-        else:
-            strategy = 'korean'
-        
-        braille_content, created = BrailleContent.objects.get_or_create(
-            unit=unit,
-            strategy=strategy,
-            defaults={
-                'status': 'converting',
-                'cells': [],
-            }
+        # 서비스 사용 (중복 로직 제거)
+        service = BrailleConversionService()
+        result = service.convert_with_semantic_chunking(
+            unit_id=unit_id,
+            subject=subject,
+            create_chunks=True
         )
         
-        if not created and braille_content.status == 'completed':
-            # 이미 완료된 경우
+        if result['status'] == 'completed':
+            braille_content = BrailleContent.objects.filter(unit_id=unit_id).first()
+            chunk_count = 0
+            if braille_content:
+                chunk_count = BrailleChunk.objects.filter(content=braille_content).count()
+            
             return {
                 'unit_id': unit_id,
                 'status': 'completed',
-                'chunk_count': BrailleChunk.objects.filter(content=braille_content).count()
+                'chunk_count': chunk_count or len(result.get('chunks', []))
+            }
+        else:
+            return {
+                'unit_id': unit_id,
+                'status': 'failed',
+                'error': result.get('error', 'Unknown error')
             }
         
-        braille_content.status = 'converting'
-        braille_content.save()
-        
-        # Braille Encoding Engine 사용
-        encoding_engine = BrailleEncodingEngine()
-        result = encoding_engine.create_braille_chunks(
-            braille_content,
-            unit.content,
-            strategy
-        )
-        
-        # 모든 셀 수집
-        all_cells = []
-        for chunk in result:
-            all_cells.extend(chunk.cells)
-        
-        braille_content.cells = all_cells
-        braille_content.status = 'completed'
-        braille_content.converted_at = timezone.now()
-        braille_content.error_message = ''
-        braille_content.save()
-        
-        return {
-            'unit_id': unit_id,
-            'status': 'completed',
-            'chunk_count': len(result)
-        }
-        
     except Exception as e:
-        braille_content = BrailleContent.objects.filter(unit_id=unit_id, strategy=strategy).first()
+        braille_content = BrailleContent.objects.filter(unit_id=unit_id).first()
         if braille_content:
             braille_content.status = 'failed'
             braille_content.error_message = str(e)
@@ -333,7 +293,7 @@ def extract_units_async(textbook_id: int, text: str) -> Dict:
         }
     """
     try:
-        from .views import extract_units_from_text
+        from .utils.text_extractor import extract_units_from_text
         from .models import Textbook, Unit
         
         textbook = Textbook.objects.get(id=textbook_id)

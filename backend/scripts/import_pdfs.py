@@ -21,6 +21,7 @@ django.setup()
 
 from apps.exam.models import Textbook, Unit
 from apps.exam.repositories import TextbookRepository, UnitRepository
+from apps.exam.utils.text_extractor import extract_textbook_info, extract_units_from_text
 from core.ai.factory import AIClientFactory
 
 # PDF 폴더 경로
@@ -28,62 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PDF_DIR = BASE_DIR / "data" / "pdfs"
 
 
-def extract_textbook_info(filename: str) -> dict:
-    """
-    파일명에서 교재 정보 추출
-    예: "수능특강_국어_2024.pdf" → {title: "수능특강 국어", subject: "국어", year: 2024}
-    """
-    # 확장자 제거
-    name = filename.replace('.pdf', '').replace('.PDF', '')
-    
-    # 패턴 매칭
-    patterns = [
-        r'(.+?)_(\w+)_(\d{4})',  # 수능특강_국어_2024
-        r'(.+?)\s+(\w+)\s+(\d{4})',  # 수능특강 국어 2024
-        r'(.+?)_(\d{4})',  # 수능특강_2024
-        r'(.+?)\s+(\d{4})',  # 수능특강 2024
-    ]
-    
-    for pattern in patterns:
-        match = re.match(pattern, name)
-        if match:
-            if len(match.groups()) == 3:
-                title, subject, year = match.groups()
-                return {
-                    'title': f"{title} {subject}",
-                    'subject': subject,
-                    'year': int(year),
-                    'publisher': 'EBS'  # 기본값
-                }
-            elif len(match.groups()) == 2:
-                title, year = match.groups()
-                # year가 숫자인지 확인
-                if year.isdigit():
-                    return {
-                        'title': title,
-                        'subject': '',
-                        'year': int(year),
-                        'publisher': 'EBS'
-                    }
-                else:
-                    # year가 과목일 수도 있음
-                    return {
-                        'title': f"{title} {year}",
-                        'subject': year,
-                        'year': None,
-                        'publisher': 'EBS'
-                    }
-    
-    # 매칭 실패 시 파일명을 그대로 사용
-    return {
-        'title': name,
-        'subject': '',
-        'year': None,
-        'publisher': 'EBS'
-    }
-
-
-def extract_units_from_text(text: str, ai_client=None) -> list:
+def extract_units_from_text_with_ai(text: str, ai_client=None) -> list:
     """
     텍스트에서 단원 정보 추출
     AI를 사용하여 단원별로 분리 (선택적)
@@ -195,7 +141,11 @@ def process_pdf_file(pdf_path: Path, ai_client=None) -> dict:
         
         # 단원 추출
         print(f"  단원 추출 중...")
-        units = extract_units_from_text(text, ai_client)
+        # 기본 패턴 매칭으로 먼저 시도
+        units = extract_units_from_text(text)
+        # AI 클라이언트가 있고 단원이 없으면 AI로 재시도
+        if ai_client and not units:
+            units = extract_units_from_text_with_ai(text, ai_client)
         
         if not units:
             # 단원을 찾지 못한 경우 전체를 하나의 단원으로

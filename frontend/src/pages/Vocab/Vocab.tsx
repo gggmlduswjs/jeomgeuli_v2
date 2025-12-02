@@ -6,7 +6,7 @@ import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
 import ToastA11y from '../../components/system/ToastA11y';
-import { vocabAPI } from '../../lib/api/VocabAPI';
+import { vocabAPI } from '../../lib/api';
 import { useVocabStore } from '../../store/vocabStore';
 import VocabCard from './components/VocabCard';
 import SisaWords from './components/SisaWords';

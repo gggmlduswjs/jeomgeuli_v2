@@ -3,7 +3,7 @@ import { BraillePatternFactory } from '../../../lib/braillePattern';
 import useBrailleBLE from '../../../hooks/useBrailleBLE';
 import { useBrailleChunkReader } from '../../../hooks/useBrailleChunkReader';
 import { extractKeywords } from '../../../utils/contentExtractor';
-import type { PassageStructure as PassageStructureType } from '../../../lib/api/ExamAPI';
+import type { PassageStructure as PassageStructureType } from '../../../lib/api';
 
 interface PassageStructureProps {
   structure: PassageStructureType | null;

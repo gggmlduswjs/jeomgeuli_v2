@@ -3,8 +3,7 @@
  * Frontend-Backend 통합 테스트
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { examAPI } from '../../lib/api/ExamAPI';
-import { vocabAPI } from '../../lib/api/VocabAPI';
+import { examAPI, vocabAPI } from '../../lib/api';
 
 // Mock fetch
 global.fetch = vi.fn();

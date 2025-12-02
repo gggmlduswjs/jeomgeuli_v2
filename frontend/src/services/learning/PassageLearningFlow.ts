@@ -3,7 +3,7 @@
  * 지문 학습 플로우 구현
  */
 import { LearningFlow } from './LearningFlow';
-import { examAPI, PassageStructure } from '../../lib/api/ExamAPI';
+import { examAPI, type PassageStructure } from '../../lib/api';
 
 export class PassageLearningFlow extends LearningFlow {
   private passage: string = '';

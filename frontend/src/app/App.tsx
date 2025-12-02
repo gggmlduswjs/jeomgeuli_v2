@@ -1,33 +1,12 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, useEffect, useRef } from "react";
 import ErrorBoundary from "../components/system/ErrorBoundary";
 import GlobalVoiceRecognition from "../components/input/GlobalVoiceRecognition";
 import PerformanceMonitor from "../components/system/PerformanceMonitor";
 import DevHealth from "../components/system/DevHealth";
 import HealthCheck from "../components/system/HealthCheck";
 import VoiceRecognitionDebug from "../components/debug/VoiceRecognitionDebug";
-
-// Lazy load pages for code splitting
-const Home = lazy(() => import("../pages/Home"));
-const LearnIndex = lazy(() => import("../pages/LearnIndex"));
-const LearnStep = lazy(() => import("../pages/LearnStep"));
-const FreeConvert = lazy(() => import("../pages/FreeConvert"));
-const Quiz = lazy(() => import("../pages/Quiz"));
-const Review = lazy(() => import("../pages/Review"));
-const Explore = lazy(() => import("../pages/Explore"));
-const NotFound = lazy(() => import("../pages/NotFound"));
-const TextbookConverter = lazy(() => import("../pages/exam/TextbookConverter"));
-const TextCompress = lazy(() => import("../pages/exam/TextCompress"));
-const SentenceRepeat = lazy(() => import("../pages/exam/SentenceRepeat"));
-// New Jeomgeuli-Suneung pages
-const Textbook = lazy(() => import("../pages/Textbook/Textbook"));
-const Passage = lazy(() => import("../pages/Passage/Passage"));
-const GraphTable = lazy(() => import("../pages/GraphTable/GraphTable"));
-const Question = lazy(() => import("../pages/Question/Question"));
-const Vocab = lazy(() => import("../pages/Vocab/Vocab"));
-const BrailleSpeed = lazy(() => import("../pages/BrailleSpeed/BrailleSpeed"));
-const ExamMode = lazy(() => import("../pages/ExamMode/ExamMode"));
-const ExamTimer = lazy(() => import("../pages/ExamTimer/ExamTimer"));
+import { routes, legacyRedirects, legacyRoutes, notFoundRoute } from "./routes";
 
 // Loading component
 const PageLoader = () => (
@@ -88,41 +67,27 @@ export default function App(){
           <GlobalVoiceRecognition />
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Home />} />
+              {/* 메인 라우트 */}
+              {routes.map((route) => (
+                <Route key={route.path} path={route.path} element={<route.element />} />
+              ))}
               
-              {/* New Jeomgeuli-Suneung routes */}
-              <Route path="/textbook" element={<Textbook />} />
-              <Route path="/passage" element={<Passage />} />
-              <Route path="/graph-table" element={<GraphTable />} />
-              <Route path="/question" element={<Question />} />
-              <Route path="/vocab" element={<Vocab />} />
-              <Route path="/braille-speed" element={<BrailleSpeed />} />
-              <Route path="/exam-mode" element={<ExamMode />} />
-              <Route path="/exam-timer" element={<ExamTimer />} />
-              
-              {/* Legacy routes - 리다이렉트 */}
-              <Route path="/learn" element={<Textbook />} />
-              <Route path="/quiz" element={<Question />} />
-              <Route path="/review" element={<Question />} />
-              <Route path="/explore" element={<Vocab />} />
-              <Route path="/free-convert" element={<Textbook />} />
+              {/* 레거시 라우트 리다이렉트 */}
+              {legacyRedirects.map((redirect) => (
+                <Route 
+                  key={redirect.from} 
+                  path={redirect.from} 
+                  element={<Navigate to={redirect.to} replace />} 
+                />
+              ))}
 
-              {/* Legacy routes (backward compatibility) */}
-              <Route path="/explore" element={<Explore />} />
-              <Route path="/learn" element={<LearnIndex />} />
-              <Route path="/learn/char" element={<LearnStep />} />
-              <Route path="/learn/word" element={<LearnStep />} />
-              <Route path="/learn/sentence" element={<LearnStep />} />
-              <Route path="/learn/free" element={<FreeConvert />} />
-              <Route path="/free-convert" element={<FreeConvert />} />
-              <Route path="/quiz" element={<Quiz />} />
-              <Route path="/learn/quiz" element={<Quiz />} />
-              <Route path="/review" element={<Review />} />
-              <Route path="/exam/textbook" element={<TextbookConverter />} />
-              <Route path="/exam/compress" element={<TextCompress />} />
-              <Route path="/exam/repeat" element={<SentenceRepeat />} />
+              {/* 레거시 라우트 (제거 예정) */}
+              {legacyRoutes.map((route) => (
+                <Route key={route.path} path={route.path} element={<route.element />} />
+              ))}
 
-              <Route path="*" element={<NotFound />} />
+              {/* 404 라우트 */}
+              <Route path={notFoundRoute.path} element={<notFoundRoute.element />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

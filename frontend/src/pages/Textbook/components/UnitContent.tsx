@@ -2,9 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useBrailleChunkReader } from '../../../hooks/useBrailleChunkReader';
 import { getSubjectStrategy, extractSubjectType } from '../../../strategies/subjectLearning';
 import { extractKeywords } from '../../../utils/contentExtractor';
-import { examAPI } from '../../../lib/api/ExamAPI';
+import { examAPI } from '../../../lib/api';
 import useBrailleBLE from '../../../hooks/useBrailleBLE';
-import type { Unit } from '../../../lib/api/ExamAPI';
+import type { Unit } from '../../../lib/api';
 
 interface UnitContentProps {
   unit: Unit | null;

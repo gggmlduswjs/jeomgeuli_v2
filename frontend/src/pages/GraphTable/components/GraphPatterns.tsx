@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BraillePatternFactory } from '../../../lib/braillePattern';
 import useBrailleBLE from '../../../hooks/useBrailleBLE';
-import type { GraphPatterns as GraphPatternsType } from '../../../lib/api/ExamAPI';
+import type { GraphPatterns as GraphPatternsType } from '../../../lib/api';
 
 interface GraphPatternsProps {
   patterns: GraphPatternsType | null;

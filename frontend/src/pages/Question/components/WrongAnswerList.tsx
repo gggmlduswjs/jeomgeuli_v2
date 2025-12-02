@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { Question } from '../../../lib/api/ExamAPI';
+import type { Question } from '../../../lib/api';
 
 interface WrongAnswer {
   question: Question;

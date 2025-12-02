@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BraillePatternFactory } from '../../../lib/braillePattern';
 import useBrailleBLE from '../../../hooks/useBrailleBLE';
-import type { AnswerResult } from '../../../lib/api/ExamAPI';
+import type { AnswerResult } from '../../../lib/api';
 
 interface AnswerResultProps {
   result: AnswerResult | null;

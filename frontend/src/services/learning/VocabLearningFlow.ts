@@ -3,7 +3,7 @@
  * 어휘 학습 플로우 구현
  */
 import { LearningFlow } from './LearningFlow';
-import { vocabAPI, VocabItem } from '../../lib/api/VocabAPI';
+import { vocabAPI, type VocabItem } from '../../lib/api';
 
 export class VocabLearningFlow extends LearningFlow {
   private vocabItems: VocabItem[] = [];

@@ -6,7 +6,7 @@ import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
 import ToastA11y from '../../components/system/ToastA11y';
-import { examAPI, type GraphPatterns } from '../../lib/api/ExamAPI';
+import { examAPI, type GraphPatterns } from '../../lib/api';
 import ImageUpload from './components/ImageUpload';
 import GraphPatternsComponent from './components/GraphPatterns';
 

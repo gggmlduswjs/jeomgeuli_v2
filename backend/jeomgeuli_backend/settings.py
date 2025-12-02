@@ -107,10 +107,16 @@ USE_TZ = True
 # Static files
 STATIC_URL = "/assets/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    FRONTEND_DIR / "dist",      # React dist 폴더 (index.html 포함)
-    FRONTEND_DIR / "dist/assets",  # React assets 폴더 (CSS/JS)
-]
+STATICFILES_DIRS = []
+# 디렉토리가 존재할 때만 추가 (빌드 전 WARNING 방지)
+if (FRONTEND_DIR / "dist").exists():
+    STATICFILES_DIRS.append(FRONTEND_DIR / "dist")
+if (FRONTEND_DIR / "dist/assets").exists():
+    STATICFILES_DIRS.append(FRONTEND_DIR / "dist/assets")
+
+# Media files (업로드된 파일)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # 기본 정적 파일 스토리지 (개발용)
 STORAGES = {

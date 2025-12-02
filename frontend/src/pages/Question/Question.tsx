@@ -6,7 +6,7 @@ import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
 import ToastA11y from '../../components/system/ToastA11y';
-import { examAPI, type Question, type AnswerResult } from '../../lib/api/ExamAPI';
+import { examAPI, type Question, type AnswerResult } from '../../lib/api';
 import { useLearnStore } from '../../store/learnStore';
 import QuestionDisplay from './components/QuestionDisplay';
 import AnswerInput from './components/AnswerInput';

@@ -6,7 +6,7 @@ import SpeechBar from '../../components/input/SpeechBar';
 import useTTS from '../../hooks/useTTS';
 import useSTT from '../../hooks/useSTT';
 import useVoiceCommands from '../../hooks/useVoiceCommands';
-import { examAPI } from '../../lib/api/ExamAPI';
+import { examAPI } from '../../lib/api';
 import { brailleAPI } from '../../lib/api/BrailleAPI';
 import useBrailleBLE from '../../hooks/useBrailleBLE';
 import ToastA11y from '../../components/system/ToastA11y';

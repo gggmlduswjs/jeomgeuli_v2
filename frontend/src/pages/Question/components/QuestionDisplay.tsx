@@ -4,7 +4,7 @@ import useBrailleBLE from '../../../hooks/useBrailleBLE';
 import { useBrailleChunkReader } from '../../../hooks/useBrailleChunkReader';
 import { getSubjectStrategy, extractSubjectType } from '../../../strategies/subjectLearning';
 import { extractFormula, extractKeywords } from '../../../utils/contentExtractor';
-import type { Question } from '../../../lib/api/ExamAPI';
+import type { Question } from '../../../lib/api';
 
 interface QuestionDisplayProps {
   question: Question | null;

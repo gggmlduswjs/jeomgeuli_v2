@@ -40,5 +40,10 @@ urlpatterns += [
 ]
 
 # 정적 파일 서빙 (개발용)
-if settings.DEBUG:
+if settings.DEBUG and settings.STATICFILES_DIRS:
+    # STATICFILES_DIRS가 비어있지 않을 때만 정적 파일 서빙
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
+
+# Media 파일 서빙 (개발용)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

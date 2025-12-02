@@ -29,7 +29,7 @@ export default function PDFUpload({ onUploadComplete, onSpeak }: PDFUploadProps)
     onSpeak('PDF를 업로드하고 있습니다. 잠시만 기다려주세요.');
 
     try {
-      const { examAPI } = await import('../../../lib/api/ExamAPI');
+      const { examAPI } = await import('../../../lib/api');
       const result = await examAPI.uploadPDF(file);
       
       setProgress(100);
